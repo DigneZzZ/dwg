@@ -4,7 +4,7 @@
 if ! command -v qrencode &> /dev/null; then
     echo "Утилита qrencode не установлена. Устанавливаю..."
     sudo apt-get update
-    sudo apt-get install qrencode
+    sudo apt-get install qrencode -y
 fi
 
 # Путь к файлу конфигурации
