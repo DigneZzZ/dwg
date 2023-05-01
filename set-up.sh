@@ -62,10 +62,7 @@ printf "\e[42mПереходим в папку dwg...\e[0m\n"
 cd dwg
 printf "\e[42mПерешли в папку dwg\e[0m\n"
 
-# Запуск скрипта ufw.sh
-printf "\e[42mЗапуск скрипта docker.sh для установки Docker и Docker-compose...\e[0m\n"
-./tools/ufw.sh
-printf "\e[42mСкрипт docker.sh успешно выполнен.\e[0m\n"
+
 
 
 # Устанавливаем редактор Nano
@@ -430,10 +427,10 @@ echo -e "${GREEN}Логин: $username${NC}"
 echo -e "${GREEN}Пароль: $password${NC}"
 
 # Запрашиваем у пользователя, хочет ли он поменять пароль для SSH
-printf "Вы хотите поменять пароль для SSH? (y/n): "
+printf "Вы хотите поменять порт для SSH? (y/n): "
 read ssh_answer
 
-# Если пользователь отвечает "y" или "Y", запускаем скрипт для изменения пароля
+# Если пользователь отвечает "y" или "Y", запускаем скрипт для изменения порта
 if [[ "$ssh_answer" == "y" || "$ssh_answer" == "Y" ]]; then
   # Запуск скрипта ssh.sh
   printf "\e[42mЗапуск скрипта ssh.sh для смены стандартного порта SSH...\e[0m\n"
@@ -441,16 +438,17 @@ if [[ "$ssh_answer" == "y" || "$ssh_answer" == "Y" ]]; then
   printf "\e[42mСкрипт ssh.sh успешно выполнен.\e[0m\n"
 fi
 
-# Запрашиваем у пользователя, хочет ли он поменять пароль для SSH
+# Запрашиваем у пользователя, хочет ли установить UFW Firewall
 printf "Вы хотите установить UFW Firewall? (y/n): "
 read ufw_answer
 
 # Если пользователь отвечает "y" или "Y", запускаем скрипт для изменения пароля
 if [[ "$ufw_answer" == "y" || "$ufw_answer" == "Y" ]]; then
-# Запуск скрипта ufw.sh
-printf "\e[42mЗапуск скрипта ufw.sh для установки UFW Firewall...\e[0m\n"
-./tools/ufw.sh
-printf "\e[42mСкрипт ufw.sh успешно выполнен.\e[0m\n"
+  # Запуск скрипта ufw.sh
+  printf "\e[42mЗапуск скрипта ufw.sh для установки UFW Firewall...\e[0m\n"
+  ./tools/ufw.sh
+  printf "\e[42mСкрипт ufw.sh успешно выполнен.\e[0m\n"
+fi
 
 # Переходим в папку /
 printf "\e[42mПереходим в папку /root/...\e[0m\n"
