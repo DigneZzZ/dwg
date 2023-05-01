@@ -408,26 +408,30 @@ docker-compose up -d
 
 # Проверяем, что пользователь ввел 1 или 2
 if [[ "$dwg_set" == "2" ]]; then
-echo ""
-echo -e "${BLUE}Текущие значения:${NC}"
-echo ""
-echo -e "Пароль от веб-интерфейса: ${BLUE}$CURRENT_PASSWORD${NC}"
-echo -e "IP адрес сервера: ${BLUE}$CURRENT_WG_HOST${NC}"
-echo -e "Маска пользовательских IP: ${BLUE}$CURRENT_WG_DEFAULT_ADDRESS${NC}"
-echo -e "Адрес входа в веб-интерфейс WireGuard после установки: ${YELLOW}http://$CURRENT_WG_HOST:51821${NC}"
-echo ""
-else
-
+  echo ""
+  echo -e "${BLUE}Текущие значения:${NC}"
+  echo ""
+  echo -e "Пароль от веб-интерфейса: ${BLUE}$CURRENT_PASSWORD${NC}"
+  echo -e "IP адрес сервера: ${BLUE}$CURRENT_WG_HOST${NC}"
+  echo -e "Маска пользовательских IP: ${BLUE}$CURRENT_WG_DEFAULT_ADDRESS${NC}"
+  echo -e "Адрес входа в веб-интерфейс WireGuard после установки: ${YELLOW}http://$CURRENT_WG_HOST:51821${NC}"
+  echo ""
+  printf '\e[48;5;202m\e[30m ################################################################## \e[0m\n'
+  printf '\e[48;5;202m\e[30m Не забудь отдельно установить UFW-Docker, для закрытия веб-интерфейса wireguard. \e[0m\n'
+  printf '\e[48;5;196m\e[97m ВНИМАНИЕ! Запускать только после того как создадите для себя клиента в WireGUARD!!! \e[0m\n'
+  printf '\e[48;5;202m\e[30m команда для установки: ./dwg-ui/tools/ufw-docker.sh \e[0m\n'
+  printf '\e[48;5;202m\e[30m ################################################################## \e[0m\n'
 fi
 
 # Выводим связку логина и пароля в консоль
+echo -e "Адрес входа в веб-интерфейс AdGuardHome после установки (только когда подключитесь к сети WireGuard!!!): ${BLUE}http://10.2.0.100${NC}"
 echo "Ниже представлены логин и пароль для входа в AdGuardHome"
 echo -e "${GREEN}Логин: $username${NC}"
 echo -e "${GREEN}Пароль: $password${NC}"
 
 # Запрашиваем у пользователя, хочет ли он поменять пароль для SSH
 printf "Вы хотите поменять порт для SSH? (y/n): "
-read ssh_answer
+read ssh_answere
 
 # Если пользователь отвечает "y" или "Y", запускаем скрипт для изменения порта
 if [[ "$ssh_answer" == "y" || "$ssh_answer" == "Y" ]]; then
