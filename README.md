@@ -4,7 +4,7 @@
 ### Представляю вам лучшую сборку для самой быстрой настройки VPN сервера на WireGuard.
 ### Во время установки можно выбрать, что установить: 
 ### **DWG-UI** = AdGuard with DoH DNS +  Wireguard with UI (wg-easy) + Unbound 
-### **DWG-CLI** = AdGuard with DoH DNS +  Wireguard with UI (wg-easy) + Unbound 
+### **DWG-CLI** = AdGuard with DoH DNS +  Wireguard CLI + Unbound 
 Тема поддержки на моём форуме:
 https://openode.ru/forum/28-dwg-sborki-docker-wireguard-vpn/
 
