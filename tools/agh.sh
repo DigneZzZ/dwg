@@ -8,11 +8,7 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# Проверяем, выполняется ли скрипт от имени пользователя root
-if [ "$EUID" -ne 0 ]; then
-  echo -e "${RED}Запустите скрипт с правами root${NC}"
-  exit
-fi
+
 
 # Устанавливаем apache2-utils, если она не установлена
 if ! [ -x "$(command -v htpasswd)" ]; then
