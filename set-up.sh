@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#!/bin/bash
-
 if grep -q "VERSION_ID=\"10\"" /etc/os-release; then
   echo "Этот скрипт не может быть выполнен на Debian 10."
   exit 1
@@ -250,6 +248,7 @@ else
     if lsof -Pi :51821 -sTCP:LISTEN -t >/dev/null ; then
         printf "${RED}!!!!>>> Порт 51821 уже используется контейнером.!\n ${NC}"
         if docker ps --format '{{.Names}} {{.Ports}}' | grep -q "wg-easy.*:51821->" ; then
+            echo  "Для смены параметров WireGuard и окружения, используйте скрипт change.sh: "
             printf "WG-EASY контейнер использует порт 51821. Хотите продолжить установку? (y/n): "
             read -r choice
             case "$choice" in 
