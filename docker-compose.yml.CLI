@@ -13,32 +13,30 @@ services:
 
   wireguard:
     depends_on: [unbound, adguardhome]
-    image: linuxserver/wireguard
+    image: lscr.io/linuxserver/wireguard:latest
     container_name: wireguard
     cap_add:
       - NET_ADMIN
-      - SYS_MODULE
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=America/Los_Angeles # Change to your timezone
+      - TZ=America/Los_Angeles # Замените на свой часовой пояс
+      - SERVERURL=MYHOST_IP #optional - Для использования с DDNS (раскомментируйте, чтобы использовать)
       - SERVERPORT=51820
-      #- SERVERURL=my.ddns.net #optional - For use with DDNS (Uncomment to use)
-      - PEERS=1 # How many peers to generate for you (clients)
-      - PEERDNS=10.2.0.100 # Set it to point to AdGuard
+      - PEERS=1 # Количество пиров (клиентов)
+      - PEERDNS=10.2.0.100 # Установите его, чтобы указать на AdGuard
       - INTERNAL_SUBNET=10.10.10.0
-      
+      - DNS=10.2.0.100 # Указывает на AdGuard
+      - POSTUP='iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE'
+      - POSTDOWN='iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE'
+      - ALLOWEDIPS=0.0.0.0/0,::/0 # Разрешить трафик от всех IP
     volumes:
       - ./wireguard:/config
       - /lib/modules:/lib/modules
     ports:
       - "51820:51820/udp"
-    dns:
-      - 10.2.0.100 # Points to adguard
-      - 10.2.0.200 # Points to unbound
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
-
     restart: unless-stopped
     networks:
       private_network:
