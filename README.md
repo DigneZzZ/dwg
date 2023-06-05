@@ -5,12 +5,14 @@
 ### Во время установки можно выбрать, что установить: 
 ### **DWG-UI** = AdGuard with DoH DNS +  Wireguard with UI (wg-easy) + Unbound 
 ### **DWG-CLI** = AdGuard with DoH DNS +  Wireguard CLI + Unbound 
+### **DWG-DARK** = AdGuard with DoH DNS +  Wireguard with UI (WG-easy) + Unbound  (Контроль каждого пользователя в AdGuardHome)
 Тема поддержки на моём форуме:
-https://openode.ru/forum/28-dwg-sborki-docker-wireguard-vpn/
+https://openode.ru/topic/370-dwg-multi/
 
 # Требования
 * Чистый,новый сервер.
 * Поддерживаемые операционные системы: **Ubuntu 20.04, 22.04; Debian 11, Centos 8,9**
+* Не рекомендуется к установке с другими сборками, либо переустановка одного за другим - могут быть ошибки.
 
 Скрипт устанавливает все автоматически.
 Все комментарии по скрипту внутри в комментариях
