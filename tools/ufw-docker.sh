@@ -45,9 +45,23 @@ sudo chmod +x /usr/local/bin/ufw-docker
 # Устанавливаем ufw-docker
 ufw-docker install
   printf "${GREEN}Ставим ufw-docker${NC}\n"
+
+if [ "$(docker ps -q -f name=wg-easy)" ]; then
 # Разрешаем трафик на порт 51821 для сети 10.10.10.0/24
 sudo ufw route allow proto tcp from 10.10.10.0/24 to any port 51821
   printf "${GREEN}Разрешаем трафик на порт 51821 только для внутренней сети докера${NC}\n"
+elif [ "$(docker ps -q -f name=dwg-agh-wg)" ]; then
+# Разрешаем трафик на порт 51821 для сети 10.10.10.0/24
+sudo ufw route allow proto tcp from 10.10.10.0/24 to any port 51821
+  printf "${GREEN}Разрешаем трафик на порт 51821 только для внутренней сети докера${NC}\n"
+  # Разрешаем трафик на порт 80 (AGH) для сети 10.10.10.0/24
+sudo ufw route allow proto tcp from 10.10.10.0/24 to any port 80
+  printf "${GREEN}Разрешаем трафик на порт 80 - ADGuardHome только для внутренней сети докера${NC}\n"
+else
+fi
+
+
+  
 # Отключаем ufw
 sudo ufw disable
   printf "${GREEN}Выключили...${NC}\n"
@@ -57,5 +71,10 @@ sudo ufw --force enable
   printf "${GREEN}Включили....${NC}\n"
   printf "${YELLOW}***********************${NC}\n"
     printf "${RED}Теперь веб-интерфейс будет доступен только по адресу (ТОЛЬКО ПРИ ПОДКЛЮЧЕНИИ ЧЕРЕЗ WIREGUARD!):${NC}\n"
+    if [ "$(docker ps -q -f name=wg-easy)" ]; then
       printf "${BLUE}http://10.2.0.3:51821${NC}\n"
+elif [ "$(docker ps -q -f name=dwg-agh-wg)" ]; then
+      printf "${BLUE}http://10.2.0.100:51821${NC}\n"
+else
+fi
         printf "${YELLOW}***********************${NC}\n"
