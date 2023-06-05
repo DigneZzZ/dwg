@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  unbound:
+    image: "mvance/unbound:1.17.0"
+    container_name: unbound
+    restart: unless-stopped
+    hostname: "unbound"
+    volumes:
+      - "./unbound:/opt/unbound/etc/unbound/"
+    networks:
+      vpn_net:
+        ipv4_address: 10.2.0.200
+
+  adwireguard:
+    container_name: dwg-agh-wg
+    # image: ghcr.io/iganeshk/adwireguard-dark:latest
+    image: iganesh/adwireguard-dark:latest
+    restart: unless-stopped
+    ports:
+      - '53:53'           # AdGuardHome DNS Port
+      - '80:80'       # Default Address AdGuardHome WebUI
+      - '853:853'         # DNS-TLS
+      - '51820:51820/udp' # wiregaurd port
+      - '51821:51821/tcp' # wg-easy webUI
+    environment:
+        # WG-EASY ENVS
+      - WG_HOST=MYHOST_IP
+      - PASSWORD=openode
+      - WG_PORT=51820
+      - WG_DEFAULT_ADDRESS=10.10.10.x
+      - WG_DEFAULT_DNS=10.2.0.100
+      - WG_MTU=1280
+    volumes:
+        # adguard-home volume
+      - './work:/opt/adwireguard/work'
+      - './conf:/opt/adwireguard/conf'
+        # wg-easy volume
+      - './wireguard:/etc/wireguard'
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    depends_on: [unbound]
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=1    # Disable IPv6
+    networks:
+      vpn_net:
+        ipv4_address: 10.2.0.100
+
+networks:
+  vpn_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.2.0.0/24
