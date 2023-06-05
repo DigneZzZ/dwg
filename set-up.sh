@@ -574,7 +574,7 @@ if [[ "$dwg_set" == "3" ]]; then
   echo -e "Пароль от веб-интерфейса: ${BLUE}$CURRENT_PASSWORD${NC}"
   echo -e "IP адрес сервера: ${BLUE}$CURRENT_WG_HOST${NC}"
   echo -e "Маска пользовательских IP: ${BLUE}$CURRENT_WG_DEFAULT_ADDRESS${NC}"
-  echo -e "Адрес входа в веб-интерфейс WireGuard после установки: ${YELLOW}http://$CURRENT_WG_DEFAULT_DNS:51821${NC}"
+  echo -e "Адрес входа в веб-интерфейс WireGuard после установки: ${YELLOW}http://$CURRENT_WG_HOST:51821${NC}"
   echo ""
   printf '\e[48;5;202m\e[30m ################################################################## \e[0m\n'
   printf '\e[48;5;202m\e[30m Не забудь отдельно установить UFW-Docker, для закрытия веб-интерфейса wireguard. \e[0m\n'
