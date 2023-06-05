@@ -437,7 +437,7 @@ echo ""
 echo -e "Пароль от веб-интерфейса: ${BLUE}$CURRENT_PASSWORD${NC}"
 echo -e "IP адрес сервера: ${BLUE}$CURRENT_WG_HOST${NC}"
 echo -e "Маска пользовательских IP: ${BLUE}$CURRENT_WG_DEFAULT_ADDRESS${NC}"
-echo -e "Адрес входа в веб-интерфейс WireGuard после установки: ${YELLOW}http://$CURRENT_WG_DEFAULT_DNS:51821${NC}"
+echo -e "Адрес входа в веб-интерфейс WireGuard после установки: ${YELLOW}http://$CURRENT_WG_HOST:51821${NC}"
 echo ""
 
  #### ЗДЕСЬ КОНЕЦ КОДА
