@@ -70,7 +70,7 @@ sudo ufw route allow proto tcp from 10.10.10.0/24 to any port 51821
   # Разрешаем трафик на порт 80 (AGH) для сети 10.10.10.0/24
 sudo ufw route allow proto tcp from 10.10.10.0/24 to any port 80
   printf "${GREEN}Разрешаем трафик на порт 80 - ADGuardHome только для внутренней сети докера${NC}\n"
-else
+
 fi
 
 
@@ -87,7 +87,7 @@ sudo ufw --force enable
     if [ "$(docker ps -q -f name=wg-easy)" ]; then
       printf "${BLUE}http://10.2.0.3:51821${NC}\n"
 elif [ "$(docker ps -q -f name=dwg-agh-wg)" ]; then
-      printf "${BLUE}http://10.2.0.100:51821${NC}\n"
-else
+      printf "${BLUE}WireGuard: http://10.2.0.100:51821${NC}\n"
+            printf "${BLUE}AdGuardHome: http://10.2.0.100${NC}\n"
 fi
         printf "${YELLOW}***********************${NC}\n"
