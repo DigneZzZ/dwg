@@ -46,16 +46,7 @@ else
   exit
 fi
 
-# Проверяем наличие клиентов в файле
-if grep -q "^\[Peer\]" ~$WG_CONF_PATH; then
-  printf "${GREEN}В файле $WG_CONF_PATH есть клиенты. Можно продолжать работу.${NC}\n"
-else
-  printf "${BG_RED}В файле $WG_CONF_PATH нет клиентов. Нельзя продолжать работу.${NC}\n"
-  printf "${BG_RED}Если бы вы сейчас установили ufw-docker, вы не смогли бы подключиться к WireGuard!${NC}\n"
-  printf "${BG_RED}Создайте Peer'a и повторите заново!${NC}\n"
-  printf "${BG_RED}Если скрипт отработал не правильно, напишите мне на форуме: http://openode.ru${NC}\n"
-  exit
-fi
+
   
 # Скачиваем ufw-docker
 sudo wget -O /usr/local/bin/ufw-docker https://github.com/chaifeng/ufw-docker/raw/master/ufw-docker
