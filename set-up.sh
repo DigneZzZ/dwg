@@ -351,9 +351,7 @@ elif [[ "$dwg_set" == "3" ]]; then  #DWG-DARK
       exit 1
     fi
   fi
-  # Переименовываем файл docker-compose.yml.UI в docker-compose.yml
-  mv docker-compose.yml.DARK docker-compose.yml
-  printf "Файл docker-compose.yml.DARK успешно переименован в docker-compose.yml\n"
+
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
     #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
       #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -414,6 +412,11 @@ read choice_resolv
     exit 1
   fi
 
+
+  # Переименовываем файл docker-compose.yml.UI в docker-compose.yml
+  mv docker-compose.yml.DARK docker-compose.yml
+  printf "Файл docker-compose.yml.DARK успешно переименован в docker-compose.yml\n"
+  
 # Получаем внешний IP-адрес
 MYHOST_IP=$(hostname -I | cut -d' ' -f1)
 
