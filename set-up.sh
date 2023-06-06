@@ -405,7 +405,7 @@ read choice_resolv
 
   if [[ $choice_resolv == "" || $choice_resolv == "Y" || $choice_resolv == "y" ]]; then
 
-    printf "\e[42mДля корректной работы сборки DWG-DARK запустите скрипт ./dwg/53getfree.sh/ (будет выполнена перезагрузка)\e[0m\n"
+    printf "\e[42mДля корректной работы сборки DWG-DARK запустите скрипт {RED}./dwg/53getfree.sh \e[42m (будет выполнена перезагрузка)\e[0m\n"
     printf "\e[42mЕсли вы это уже сделали, подождите просто 5 секунд  и установка продолжится.\e[0m\n"
     sleep 5
 
