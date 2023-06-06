@@ -38,7 +38,7 @@ https://openode.ru/topic/370-dwg-multi/
 Запусти команду на чистом сервере
 
 ```bash
-apt update && apt install curl sudo git -y && curl -Of https://raw.githubusercontent.com/DigneZzZ/dwg/main/set-up.sh && chmod +x set-up.sh && ./set-up.sh
+apt update && apt install sudo -y &&  bash <(wget -qO- https://raw.githubusercontent.com/DigneZzZ/dwg/main/set-up.sh)
 ```
 
 ### После запуска скрипта, будет предложен выбор, что установить:
