@@ -18,9 +18,9 @@ services:
     image: iganesh/adwireguard-dark:latest
     restart: unless-stopped
     ports:
-      - '53:53'           # AdGuardHome DNS Port
-      - '80:80'       # Default Address AdGuardHome WebUI
-      - '853:853'         # DNS-TLS
+#      - '53:53'           # AdGuardHome DNS Port
+#      - '80:80'       # Default Address AdGuardHome WebUI
+#      - '853:853'         # DNS-TLS
       - '51820:51820/udp' # wiregaurd port
       - '51821:51821/tcp' # wg-easy webUI
     environment:
