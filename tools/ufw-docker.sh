@@ -68,8 +68,8 @@ elif [ "$(docker ps -q -f name=dwg-agh-wg)" ]; then
 sudo ufw route allow proto tcp from 10.10.10.0/24 to any port 51821
   printf "${GREEN}Разрешаем трафик на порт 51821 только для внутренней сети докера${NC}\n"
   # Разрешаем трафик на порт 80 (AGH) для сети 10.10.10.0/24
-sudo ufw route allow proto tcp from 10.10.10.0/24 to any port 80
-  printf "${GREEN}Разрешаем трафик на порт 80 - ADGuardHome только для внутренней сети докера${NC}\n"
+#sudo ufw route allow proto tcp from 10.10.10.0/24 to any port 80
+#  printf "${GREEN}Разрешаем трафик на порт 80 - ADGuardHome только для внутренней сети докера${NC}\n"
 
 fi
 
