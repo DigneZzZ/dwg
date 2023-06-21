@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# Для ручного поиска можно использовать команду: find /var/lib/docker/overlay2 -type f -path "*/diff/opt/adwireguard/www/index.html" -print
 root_dir="/var/lib/docker/overlay2"
 target_dir="diff/opt/adwireguard/www"
 target_file="index.html"
