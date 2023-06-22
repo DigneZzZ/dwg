@@ -1,5 +1,26 @@
 #!/bin/bash
 
+echo '  
+
+
+
+      ██████╗ ██╗    ██╗ ██████╗ 
+      ██╔══██╗██║    ██║██╔════╝ 
+      ██║  ██║██║ █╗ ██║██║  ███╗
+      ██║  ██║██║███╗██║██║   ██║
+      ██████╔╝╚███╔███╔╝╚██████╔╝
+      ╚═════╝  ╚══╝╚══╝  ╚═════╝ 
+                           
+BBBB  Y   Y     DDD  III  GGG  N   N EEEE ZZZZZ ZZZZZ ZZZZZ 
+B   B  Y Y      D  D  I  G     NN  N E       Z     Z     Z  
+BBBB    Y       D  D  I  G  GG N N N EEE    Z     Z     Z   
+B   B   Y       D  D  I  G   G N  NN E     Z     Z     Z    
+BBBB    Y       DDD  III  GGG  N   N EEEE ZZZZZ ZZZZZ ZZZZZ 
+                                                            
+
+'
+sleep 5s
+
 if grep -q "VERSION_ID=\"10\"" /etc/os-release; then
   echo "Этот скрипт не может быть выполнен на Debian 10."
   exit 1
