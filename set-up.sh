@@ -19,7 +19,7 @@ BBBB    Y       DDD  III  GGG  N   N EEEE ZZZZZ ZZZZZ ZZZZZ
                                                             
 
 '
-sleep 5s
+sleep 2s
 
 if grep -q "VERSION_ID=\"10\"" /etc/os-release; then
   echo "Этот скрипт не может быть выполнен на Debian 10."
