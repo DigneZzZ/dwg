@@ -1,3 +1,5 @@
+#!/bin/bash
+
 mkdir /etc/systemd/resolved.conf.d
 echo "[Resolve]
 DNS=127.0.0.1
