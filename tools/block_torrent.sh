@@ -9,3 +9,5 @@ iptables -I FORWARD -m string --algo bm --string "torrent" -j DROP
 iptables -I FORWARD -m string --algo bm --string "announce" -j DROP
 iptables -I FORWARD -m string --algo bm --string "info_hash" -j DROP
 
+apt install iptables-persistent -y
+/sbin/iptables-save > /etc/iptables/rules.v4
