@@ -1,3 +1,4 @@
+#!/bin/bash
 iptables -D FORWARD -p tcp -m ipp2p --bit -j DROP
 iptables -D FORWARD -p udp -m ipp2p --bit -j DROP
 iptables -D FORWARD -m string --algo bm --string "BitTorrent" -j DROP
