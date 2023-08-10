@@ -24,8 +24,8 @@ https://openode.ru/topic/370-dwg-multi/
 2. Посуточные тарифы
 3. Доступные тарифы мощных сборок.
 4. Лояльность к VPN использованию серверов.
-### [VDSina.ru](https://vdsina.ru/?partner=rwmhc7jbcg) Рекомендую VPS хостинг - по рефералке скидка 10%!!!: 	
 ### [AEZA.net](https://aeza.net/?ref=377137)  -  бонус +15% к пополнению
+### [VDSina.ru](https://vdsina.ru/?partner=rwmhc7jbcg) по рефералке скидка 10% 	
 ### [Melbicom](https://melbicom.ru/?from=44619)
 Достаточно хорошая стабильность и связь в 1гб/с (причем с гарантиями не менее 100мбит\с)
 ### [Pq.Hosting](https://pq.hosting/?from=45709)
