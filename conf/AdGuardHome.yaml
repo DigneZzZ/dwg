@@ -66,7 +66,7 @@ dns:
   ipset: []
   ipset_file: ""
   filtering_enabled: true
-  filters_update_interval: 168
+  filters_update_interval: 24
   parental_enabled: false
   safesearch_enabled: false
   safebrowsing_enabled: false
@@ -107,12 +107,12 @@ tls:
 querylog:
   enabled: true
   file_enabled: true
-  interval: 720h
+  interval: 24h
   size_memory: 1000
   ignored: []
 statistics:
   enabled: true
-  interval: 30
+  interval: 24h
   ignored: []
 filters:
   - enabled: false
