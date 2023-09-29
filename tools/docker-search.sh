@@ -6,7 +6,7 @@ search_folders() {
     read query
 
     # Используем find для рекурсивного поиска папок в указанной директории
-    results=$(find /var/lib/docker/containers/ -type d -name "*$query*")
+    results=$(find /var/lib/docker/overlay2 -type d -name "*$query*")
 
     # Проверяем, есть ли результаты
     if [ -z "$results" ]; then
@@ -23,7 +23,7 @@ search_files() {
     read query
 
     # Используем find для рекурсивного поиска файлов в указанной директории
-    results=$(find /var/lib/docker/containers/ -type f -name "*$query*")
+    results=$(find /var/lib/docker/overlay2 -type f -name "*$query*")
 
     # Проверяем, есть ли результаты
     if [ -z "$results" ]; then
@@ -40,7 +40,7 @@ search_any() {
     read query
 
     # Используем find для рекурсивного поиска папок и файлов в указанной директории
-    results=$(find /var/lib/docker/containers/ -name "*$query*")
+    results=$(find /var/lib/docker/overlay2 -name "*$query*")
 
     # Проверяем, есть ли результаты
     if [ -z "$results" ]; then
