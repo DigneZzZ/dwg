@@ -6,14 +6,14 @@ search_folders() {
     read query
 
     # Используем find для рекурсивного поиска папок в указанной директории
-    results=$(find /var/lib/docker/overlay2 -type d -name "*$query*")
+    results=$(find /var/lib/docker/overlay2/ -type d -name "*$query*")
 
     # Проверяем, есть ли результаты
     if [ -z "$results" ]; then
         echo "Не найдено папок с названием, содержащим '$query'"
     else
         echo "Результаты поиска:"
-        echo "$results" | awk '{print NR ". Название папки: \033[0;31m" $0 "\033[0m\nАдрес: \033[0;31m" $0 "\033[0m"}'
+        echo "$results" | awk -F/ '{print NR ". Название папки: \033[0;31m" $(NF-3) "/" $(NF-2) "/" $(NF-1) "/" $NF "\033[0m\nАдрес: \033[0;31m" $0 "\033[0m"}'
     fi
 }
 
@@ -23,14 +23,14 @@ search_files() {
     read query
 
     # Используем find для рекурсивного поиска файлов в указанной директории
-    results=$(find /var/lib/docker/overlay2 -type f -name "*$query*")
+    results=$(find /var/lib/docker/overlay2/ -type f -name "*$query*")
 
     # Проверяем, есть ли результаты
     if [ -z "$results" ]; then
         echo "Не найдено файлов с названием, содержащим '$query'"
     else
         echo "Результаты поиска:"
-        echo "$results" | awk '{print NR ". Название файла: \033[0;31m" $0 "\033[0m\nАдрес: \033[0;31m" $0 "\033[0m"}'
+        echo "$results" | awk -F/ '{print NR ". Название файла: \033[0;31m" $(NF-3) "/" $(NF-2) "/" $(NF-1) "/" $NF "\033[0m\nАдрес: \033[0;31m" $0 "\033[0m"}'
     fi
 }
 
@@ -40,14 +40,14 @@ search_any() {
     read query
 
     # Используем find для рекурсивного поиска папок и файлов в указанной директории
-    results=$(find /var/lib/docker/overlay2 -name "*$query*")
+    results=$(find /var/lib/docker/overlay2/ -name "*$query*")
 
     # Проверяем, есть ли результаты
     if [ -z "$results" ]; then
         echo "Не найдено папок или файлов с названием, содержащим '$query'"
     else
         echo "Результаты поиска:"
-        echo "$results" | awk '{print NR ". Название: \033[0;31m" $0 "\033[0m\nАдрес: \033[0;31m" $0 "\033[0m"}'
+        echo "$results" | awk -F/ '{print NR ". Название: \033[0;31m" $(NF-3) "/" $(NF-2) "/" $(NF-1) "/" $NF "\033[0m\nАдрес: \033[0;31m" $0 "\033[0m"}'
     fi
 }
 
