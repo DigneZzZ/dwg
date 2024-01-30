@@ -14,8 +14,9 @@ services:
 
   adwireguard:
     container_name: dwg-agh-wg
-    # image: ghcr.io/iganeshk/adwireguard-dark:latest
-    image: iganesh/adwireguard-dark:latest
+    #image: ghcr.io/iganeshk/adwireguard-dark:latest
+    #image: iganesh/adwireguard-dark:latest
+    image: iganesh/adwireguard-dark:v0.108.0-b.50
     restart: unless-stopped
     ports:
 #      - '53:53'           # AdGuardHome DNS Port
