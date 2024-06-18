@@ -1,26 +1,13 @@
 version: "3"
 services:
-  unbound:
-    image: "mvance/unbound:1.17.0"
-    container_name: unbound
-    restart: unless-stopped
-    hostname: "unbound"
-    volumes:
-      - "./unbound:/opt/unbound/etc/unbound/"
-    networks:
-      private_network:
-        ipv4_address: 10.2.0.200
-
   wireguard:
-    depends_on: [unbound, adguardhome]
     image: lscr.io/linuxserver/wireguard:latest
     container_name: wireguard
+    depends_on: [adguardhome] 
     cap_add:
       - NET_ADMIN
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=America/Los_Angeles # Замените на свой часовой пояс
+      - TZ=Europe/Moscow # Замените на свой часовой пояс
       - SERVERURL=MYHOST_IP #optional - Для использования с DDNS (раскомментируйте, чтобы использовать)
       - SERVERPORT=51820
       - PEERS=1 # Количество пиров (клиентов)
@@ -43,12 +30,11 @@ services:
         ipv4_address: 10.2.0.3
 
   adguardhome:
-    depends_on: [unbound]
-    image: adguard/adguardhome
+    image: adguard/adguardhome:latest
     container_name: adguardhome
     restart: unless-stopped
     environment:
-      - TZ=America/Los_Angeles
+      - TZ=Europe/Moscow
     volumes:
       - ./work:/opt/adguardhome/work
       - ./conf:/opt/adguardhome/conf
