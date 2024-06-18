@@ -1,18 +1,10 @@
-version: "3"
+version: "3.8"
 services:
-  unbound:
-    image: "mvance/unbound:1.17.0"
-    container_name: unbound
-    restart: unless-stopped
-    hostname: "unbound"
-    volumes:
-      - "./unbound:/opt/unbound/etc/unbound/"
-    networks:
-      private_network:
-        ipv4_address: 10.2.0.200
-
   wg-easy:
-    depends_on: [unbound, adguardhome]
+    image: ghcr.io/wg-easy/wg-easy:latest
+    container_name: wg-easy
+    depends_on: [adguardhome]
+    restart: unless-stopped
     environment:
       - WG_HOST=MYHOST_IP
       - PASSWORD=openode
@@ -21,16 +13,12 @@ services:
       - WG_DEFAULT_DNS=10.2.0.100
       - WG_ALLOWED_IPS=10.2.0.0/24, 0.0.0.0/0, ::/0
       - WG_PERSISTENT_KEEPALIVE=25
-      - WG_MTU=1280
-    #image: ditek/wg-easy
-    image: ghcr.io/wg-easy/wg-easy
-    container_name: wg-easy
+      - WG_MTU=1280 
     volumes:
       - .:/etc/wireguard
     ports:
       - "51820:51820/udp"
-      - "51821:51821/tcp"
-    restart: unless-stopped
+      - "51821:51821/tcp"    
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -39,18 +27,16 @@ services:
       - net.ipv4.conf.all.src_valid_mark=1
     dns:
       - 10.2.0.100
-      - 10.2.0.200
     networks:
       private_network:
         ipv4_address: 10.2.0.3
 
   adguardhome:
-    depends_on: [unbound]
-    image: adguard/adguardhome
+    image: adguard/adguardhome:latest
     container_name: adguardhome
     restart: unless-stopped
     environment:
-      - TZ=America/Los_Angeles
+      - TZ=Europe/Moscow
     volumes:
       - ./work:/opt/adguardhome/work
       - ./conf:/opt/adguardhome/conf
