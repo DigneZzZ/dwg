@@ -6,7 +6,9 @@ services:
     depends_on: [adguardhome]
     restart: unless-stopped
     environment:
+#after install change you IP below on your Domain name
       - WG_HOST=MYHOST_IP
+      - LANG=ru
       - PASSWORD=openode
       - WG_PORT=51820
       - WG_DEFAULT_ADDRESS=10.10.10.x
@@ -16,6 +18,10 @@ services:
       - WG_MTU=1280
       - UI_TRAFFIC_STATS=true
       - UI_CHART_TYPE=2 # (0 Charts disabled, 1 # Line chart, 2 # Area chart, 3 # Bar chart)
+
+    image: ghcr.io/wg-easy/wg-easy
+    container_name: wg-easy
+
     volumes:
       - .:/etc/wireguard
     ports:

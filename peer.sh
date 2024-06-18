@@ -8,7 +8,7 @@ if ! command -v qrencode &> /dev/null; then
 fi
 
 # Путь к файлу конфигурации
-wg_conf_path="wireguard/wg0.conf"
+wg_conf_path="wireguard/wg_confs/wg0.conf"
 
 # Получаем список пиров из файла конфигурации и присваиваем им порядковые номера
 peers=$(grep -oP '(?<=#).*$' $wg_conf_path | nl)
