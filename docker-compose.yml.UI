@@ -13,7 +13,9 @@ services:
       - WG_DEFAULT_DNS=10.2.0.100
       - WG_ALLOWED_IPS=10.2.0.0/24, 0.0.0.0/0, ::/0
       - WG_PERSISTENT_KEEPALIVE=25
-      - WG_MTU=1280 
+      - WG_MTU=1280
+      - UI_TRAFFIC_STATS=true
+      - UI_CHART_TYPE=2 # (0 Charts disabled, 1 # Line chart, 2 # Area chart, 3 # Bar chart)
     volumes:
       - .:/etc/wireguard
     ports:
