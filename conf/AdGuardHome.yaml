@@ -6,30 +6,24 @@ http:
   session_ttl: 720h
 users:
   - name: admin
-    password: $2y$10$G7Qu8Y3szepMfaRUyQ.FmuKR.n4U9dHOQm.GgrIMuYC9UP8vmHJri
+    password: $2a$10$mQd.YOXsNWjaS2QzEKuN1.5vYFIgBIa305NQPUefK75wNJgOrmNX.
 auth_attempts: 5
 block_auth_min: 15
 http_proxy: ""
 language: ""
 theme: auto
+dns:
   bind_hosts:
     - 0.0.0.0
   port: 53
   anonymize_client_ip: false
   ratelimit: 20
+  ratelimit_subnet_len_ipv4: 24
+  ratelimit_subnet_len_ipv6: 56
   ratelimit_whitelist: []
   refuse_any: true
   upstream_dns:
-    - '#Default Cloudlfare DNS:'
-    - tls://1.1.1.1
-    - tls://1.0.0.1
-    - https://cloudflare-dns.com/dns-query
-    - '#Adguard DNS:These servers block ads, tracking, and phishing'
-    - https://dns.adguard-dns.com/dns-query
-    - '#New increase protocol of Adguard Home DNS-over-QUIC, with the same block settings.'
-    - quic://dns.adguard-dns.com
-    - '#Quad9 Regular DNS servers which provide protection from phishing and spyware. They include blocklists, DNSSEC validation, and other security features.'
-    - https://dns.quad9.net/dns-query
+    - https://dns10.quad9.net/dns-query
   upstream_dns_file: ""
   bootstrap_dns:
     - 9.9.9.10
@@ -37,8 +31,7 @@ theme: auto
     - 2620:fe::10
     - 2620:fe::fe:10
   fallback_dns: []
-  all_servers: false
-  fastest_addr: false
+  upstream_mode: load_balance
   fastest_timeout: 1s
   allowed_clients: []
   disallowed_clients: []
@@ -55,10 +48,10 @@ theme: auto
   cache_optimistic: false
   bogus_nxdomain: []
   aaaa_disabled: false
-  enable_dnssec: true
+  enable_dnssec: false
   edns_client_subnet:
     custom_ip: ""
-    enabled: true
+    enabled: false
     use_custom: false
   max_goroutines: 300
   handle_ddr: true
@@ -67,12 +60,14 @@ theme: auto
   bootstrap_prefer_ipv6: false
   upstream_timeout: 10s
   private_networks: []
-  use_private_ptr_resolvers: true
+  use_private_ptr_resolvers: false
   local_ptr_upstreams: []
   use_dns64: false
   dns64_prefixes: []
   serve_http3: false
   use_http3_upstreams: false
+  serve_plain_dns: true
+  hostsfile_enabled: true
 tls:
   enabled: false
   server_name: ""
@@ -89,12 +84,14 @@ tls:
   private_key_path: ""
   strict_sni_check: false
 querylog:
+  dir_path: ""
   ignored: []
-  interval: 24h
+  interval: 2160h
   size_memory: 1000
   enabled: true
   file_enabled: true
 statistics:
+  dir_path: ""
   ignored: []
   interval: 24h
   enabled: true
@@ -155,7 +152,7 @@ filtering:
   blocking_ipv6: ""
   blocked_services:
     schedule:
-      time_zone: America/Los_Angeles
+      time_zone: Europe/Moscow
     ids: []
   protection_disabled_until: null
   safe_search:
@@ -189,6 +186,7 @@ clients:
     hosts: true
   persistent: []
 log:
+  enabled: true
   file: ""
   max_backups: 0
   max_size: 100
@@ -200,4 +198,4 @@ os:
   group: ""
   user: ""
   rlimit_nofile: 0
-schema_version: 27  
+schema_version: 28
