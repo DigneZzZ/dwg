@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   wg-easy:
-    image: ghcr.io/wg-easy/wg-easy:latest
+    image: ghcr.io/wg-easy/wg-easy:13
     container_name: wg-easy
     depends_on: [adguardhome]
     restart: unless-stopped
