@@ -6,7 +6,7 @@ http:
   session_ttl: 720h
 users:
   - name: admin
-    password: $2a$10$mQd.YOXsNWjaS2QzEKuN1.5vYFIgBIa305NQPUefK75wNJgOrmNX.
+    password: $2y$05$ZP25pfeVv.ZKxZa9jyquwuhbK1tmtZmkwCIvimZWMiRxI8DUHLkie
 auth_attempts: 5
 block_auth_min: 15
 http_proxy: ""
@@ -23,15 +23,19 @@ dns:
   ratelimit_whitelist: []
   refuse_any: true
   upstream_dns:
-    - https://dns10.quad9.net/dns-query
+    - https://cloudflare-dns.com/dns-query
+    - https://dns.adguard-dns.com/dns-query
+    - https://dns.quad9.net/dns-query
   upstream_dns_file: ""
   bootstrap_dns:
     - 9.9.9.10
     - 149.112.112.10
     - 2620:fe::10
     - 2620:fe::fe:10
-  fallback_dns: []
-  upstream_mode: load_balance
+  fallback_dns:
+    - https://dns.quad9.net/dns-query
+    - quic://unfiltered.adguard-dns.com
+  upstream_mode: parallel
   fastest_timeout: 1s
   allowed_clients: []
   disallowed_clients: []
@@ -86,7 +90,7 @@ tls:
 querylog:
   dir_path: ""
   ignored: []
-  interval: 2160h
+  interval: 24h
   size_memory: 1000
   enabled: true
   file_enabled: true
@@ -108,7 +112,7 @@ filters:
     url: https://easylist-downloads.adblockplus.org/advblock.txt
     name: RuAdlist
     id: 1670584470
-  - enabled: true
+  - enabled: false
     url: https://easylist-downloads.adblockplus.org/bitblock.txt
     name: BitBlock
     id: 1670584471
@@ -120,7 +124,7 @@ filters:
     url: https://easylist-downloads.adblockplus.org/easylist.txt
     name: easyList
     id: 1670584473
-  - enabled: true
+  - enabled: false
     url: https://schakal.ru/hosts/alive_hosts_ru_com.txt
     name: то же без неотвечающих хостов и доменов вне зон RU, NET и COM
     id: 1677533164
@@ -128,6 +132,34 @@ filters:
     url: https://schakal.ru/hosts/hosts_mail_fb.txt
     name: файл с разблокированными r.mail.ru и graph.facebook.com
     id: 1677533165
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
+    name: AdGuard DNS filter
+    id: 1726948599
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_59.txt
+    name: AdGuard DNS Popup Hosts filter
+    id: 1726948600
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_27.txt
+    name: OISD Blocklist Big
+    id: 1726948601
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_24.txt
+    name: 1Hosts (Lite)
+    id: 1726948602
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_10.txt
+    name: Scam Blocklist by DurableNapkin
+    id: 1726948603
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_11.txt
+    name: Malicious URL Blocklist (URLHaus)
+    id: 1726948604
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_50.txt
+    name: uBlock₀ filters – Badware risks
+    id: 1726948605
 whitelist_filters: []
 user_rules: []
 dhcp:
@@ -152,7 +184,7 @@ filtering:
   blocking_ipv6: ""
   blocked_services:
     schedule:
-      time_zone: Europe/Moscow
+      time_zone: America/Los_Angeles
     ids: []
   protection_disabled_until: null
   safe_search:
