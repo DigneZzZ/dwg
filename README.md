@@ -1,5 +1,5 @@
 # DWG - Docker WireGuard (DWG) - Проект одного скрипта 
-<img src="https://user-images.githubusercontent.com/50312583/231138618-750b4b04-ade0-4e67-852e-f103030684a9.png" width="400">
+<a href="https://github.com/DigneZzZ/dwg/blob/main/tools/README.md"><img src="https://user-images.githubusercontent.com/50312583/231138618-750b4b04-ade0-4e67-852e-f103030684a9.png" width="400"></a>
 
 ### Представляю вам лучшую сборку для самой быстрой настройки VPN сервера на WireGuard.
 ### Во время установки можно выбрать, что установить: 
