@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# URL для загрузки скрипта
+SCRIPT_URL="https://raw.githubusercontent.com/DigneZzZ/dwg/main/beta2.sh"
+
 # Рабочая директория для контейнеров
 WORK_DIR="/opt/dwg"
 # Папка для конфигурации AdGuardHome
@@ -31,16 +34,54 @@ check_port() {
 
 # Установка зависимостей
 install_deps() {
-    echo -e "${GREEN}Установка зависимостей...${NC}"
+    echo -e "${GREEN}Проверка и установка зависимостей...${NC}"
     apt update -y
-    apt install -y --fix-broken
-    apt install -y docker.io docker-compose qrencode apache2-utils net-tools
+
+    if ! command -v docker &> /dev/null; then
+        echo "Docker не установлен, устанавливаем..."
+        apt install -y docker.io
+    else
+        echo "Docker уже установлен"
+    fi
+
+    if ! docker compose version &> /dev/null; then
+        echo "Docker Compose не установлен, устанавливаем..."
+        apt install -y docker-compose
+    else
+        echo "Docker Compose уже установлен"
+    fi
+
+    if ! command -v qrencode &> /dev/null; then
+        echo "qrencode не установлен, устанавливаем..."
+        apt install -y qrencode
+    else
+        echo "qrencode уже установлен"
+    fi
+
+    if ! command -v htpasswd &> /dev/null; then
+        echo "htpasswd не установлен, устанавливаем apache2-utils..."
+        apt install -y apache2-utils
+    else
+        echo "htpasswd уже установлен"
+    fi
+
+    if ! command -v ss &> /dev/null; then
+        echo "net-tools не установлен, устанавливаем..."
+        apt install -y net-tools
+    else
+        echo "net-tools уже установлен"
+    fi
+
     if ! command -v docker &> /dev/null || ! docker compose version &> /dev/null; then
         echo -e "${RED}Ошибка: Docker или Docker Compose не установлены${NC}"
         exit 1
     fi
     if ! command -v htpasswd &> /dev/null; then
         echo -e "${RED}Ошибка: htpasswd не установлен${NC}"
+        exit 1
+    fi
+    if ! command -v ss &> /dev/null; then
+        echo -e "${RED}Ошибка: ss (net-tools) не установлен${NC}"
         exit 1
     fi
 }
@@ -57,7 +98,9 @@ get_dwg_version() {
         echo "unknown"
         return
     fi
-    if grep -q "wg-easy" "$WORK_DIR/docker-compose.yml"; then
+    if grep -q "amnezia-wg-easy" "$WORK_DIR/docker-compose.yml"; then
+        echo "amnezia"
+    elif grep -q "wg-easy" "$WORK_DIR/docker-compose.yml"; then
         echo "ui"
     elif grep -q "adwireguard" "$WORK_DIR/docker-compose.yml"; then
         echo "dark"
@@ -71,10 +114,9 @@ get_dwg_version() {
 # Функция установки скрипта как сервиса
 script_install() {
     echo -e "${GREEN}Установка скрипта как сервиса в /usr/local/bin/dwg...${NC}"
-    # Скачиваем скрипт напрямую в /usr/local/bin/dwg
-    wget -qO /usr/local/bin/dwg https://raw.githubusercontent.com/DigneZzZ/dwg/main/beta2.sh
+    wget -qO /usr/local/bin/dwg "$SCRIPT_URL"
     chmod +x /usr/local/bin/dwg
-    if [ -s /usr/local/bin/dwg ]; then  # Проверяем, что файл не пустой
+    if [ -s /usr/local/bin/dwg ]; then
         echo -e "${GREEN}Скрипт успешно установлен${NC}"
     else
         echo -e "${RED}Ошибка при установке скрипта: файл пустой или не скачан${NC}"
@@ -89,6 +131,21 @@ install_dwg() {
         exit 1
     fi
 
+    if [ -f "$WORK_DIR/docker-compose.yml" ]; then
+        echo -e "${YELLOW}DWG уже установлен (версия: $(get_dwg_version)).${NC}"
+        echo -e "${YELLOW}Хотите переустановить? Это удалит текущие контейнеры и данные (y/n): ${NC}"
+        read reinstall
+        if [ "$reinstall" == "y" ]; then
+            echo -e "${GREEN}Остановка и удаление текущих контейнеров...${NC}"
+            docker compose -f "$WORK_DIR/docker-compose.yml" down -v
+            rm -rf "$WORK_DIR"/*
+            echo -e "${GREEN}Текущая установка удалена${NC}"
+        else
+            echo -e "${GREEN}Установка отменена${NC}"
+            exit 0
+        fi
+    fi
+
     script_install
     install_deps
     mkdir -p "$WORK_DIR" && cd "$WORK_DIR" || exit 1
@@ -99,11 +156,11 @@ install_dwg() {
     echo "1. DWG-CLI (WireGuard CLI)"
     echo "2. DWG-UI (WireGuard с веб-интерфейсом + AdGuardHome)"
     echo "3. DWG-DARK (WG + AdGuardHome в одном контейнере)"
-    read -p "Введите номер (1-3): " setup_choice
+    echo "4. DWG-A (DWG-Amnezia + AdGuardHome)"
+    read -p "Введите номер (1-4): " setup_choice
 
     case $setup_choice in
         1) # DWG-CLI
-            # Проверка портов
             check_port 51820 "udp"
             compose_file=$(cat <<EOF
 version: "3"
@@ -158,7 +215,6 @@ networks:
         - subnet: 10.2.0.0/24
 EOF
             )
-            # Запрос логина и пароля для AdGuardHome
             read -p "Введите логин для AdGuardHome (по умолчанию: admin): " adguard_user
             adguard_user=${adguard_user:-admin}
             read -p "Введите пароль для AdGuardHome (по умолчанию: admin): " adguard_password
@@ -166,7 +222,6 @@ EOF
             adguard_hash=$(htpasswd -nbB "$adguard_user" "$adguard_password" | cut -d ":" -f 2)
             ;;
         2) # DWG-UI с AdGuardHome
-            # Обязательные параметры
             read -p "Введите пароль для wg-easy (по умолчанию: foobar123): " wg_password
             wg_password=${wg_password:-foobar123}
             if [[ ! "$wg_password" =~ ^[[:alnum:]]+$ ]]; then
@@ -187,7 +242,6 @@ EOF
                 wg_host=$MYHOST_IP
             fi
 
-            # Опциональные параметры с проверкой портов
             echo -e "${YELLOW}Настройка опциональных параметров:${NC}"
             read -p "Выберите язык интерфейса (en, ru, fr и т.д., по умолчанию: en): " lang
             lang=${lang:-en}
@@ -232,7 +286,6 @@ EOF
                 prometheus_hash=$(generate_hash "$prometheus_password")
             fi
 
-            # Запрос логина и пароля для AdGuardHome
             read -p "Введите логин для AdGuardHome (по умолчанию: admin): " adguard_user
             adguard_user=${adguard_user:-admin}
             read -p "Введите пароль для AdGuardHome (по умолчанию: admin): " adguard_password
@@ -358,12 +411,121 @@ networks:
         - subnet: 10.2.0.0/24
 EOF
             )
-            # Запрос логина и пароля для AdGuardHome в DWG-DARK
             read -p "Введите логин для AdGuardHome (по умолчанию: admin): " adguard_user
             adguard_user=${adguard_user:-admin}
             read -p "Введите пароль для AdGuardHome (по умолчанию: admin): " adguard_password
             adguard_password=${adguard_password:-admin}
             adguard_hash=$(htpasswd -nbB "$adguard_user" "$adguard_password" | cut -d ":" -f 2)
+            ;;
+        4) # DWG-A (DWG-Amnezia) с AdGuardHome
+            echo -e "${YELLOW}Ваш внешний IP-адрес: $MYHOST_IP${NC}"
+            read -p "Использовать внешний IP ($MYHOST_IP) или указать свой домен для Amnezia? (ip/domain, по умолчанию: ip): " host_choice
+            host_choice=${host_choice:-ip}
+            if [ "$host_choice" == "domain" ]; then
+                read -p "Введите ваш домен (например, my.domain.com): " wg_host
+                if [ -z "$wg_host" ]; then
+                    echo -e "${RED}Домен не указан, используется внешний IP${NC}"
+                    wg_host=$MYHOST_IP
+                fi
+            else
+                wg_host=$MYHOST_IP
+            fi
+
+            echo -e "${YELLOW}Настройка параметров для DWG-Amnezia:${NC}"
+            read -p "Порт веб-интерфейса (по умолчанию: 51821): " port
+            port=${port:-51821}
+            check_port "$port" "tcp"
+            read -p "Порт WireGuard (по умолчанию: 51820): " wg_port
+            wg_port=${wg_port:-51820}
+            check_port "$wg_port" "udp"
+            read -p "Язык интерфейса (en, ru, tr и т.д., по умолчанию: en): " language
+            language=${language:-en}
+            read -p "Сетевой интерфейс (по умолчанию: eth0): " wg_device
+            wg_device=${wg_device:-eth0}
+            read -p "Шаблон IP-адресов клиентов (по умолчанию: 10.8.0.x): " wg_default_address
+            wg_default_address=${wg_default_address:-10.8.0.x}
+            read -p "DNS-сервер по умолчанию (по умолчанию: 10.2.0.100 для AdGuardHome): " wg_default_dns
+            wg_default_dns=${wg_default_dns:-10.2.0.100}
+            read -p "Разрешенные IP (по умолчанию: 0.0.0.0/0, ::/0): " wg_allowed_ips
+            wg_allowed_ips=${wg_allowed_ips:-"0.0.0.0/0, ::/0"}
+            read -p "Тип аватаров Dicebear (по умолчанию: bottts): " dicebear_type
+            dicebear_type=${dicebear_type:-bottts}
+            read -p "Использовать Gravatar? (true/false, по умолчанию: true): " use_gravatar
+            use_gravatar=${use_gravatar:-true}
+
+            read -p "Введите логин для AdGuardHome (по умолчанию: admin): " adguard_user
+            adguard_user=${adguard_user:-admin}
+            read -p "Введите пароль для AdGuardHome (по умолчанию: admin): " adguard_password
+            adguard_password=${adguard_password:-admin}
+            adguard_hash=$(htpasswd -nbB "$adguard_user" "$adguard_password" | cut -d ":" -f 2)
+
+            # Создание .env
+            cat <<EOF > "$WORK_DIR/.env"
+WG_HOST=$wg_host
+LANGUAGE=$language
+PORT=$port
+WG_DEVICE=$wg_device
+WG_PORT=$wg_port
+WG_DEFAULT_ADDRESS=$wg_default_address
+WG_DEFAULT_DNS=$wg_default_dns
+WG_ALLOWED_IPS=$wg_allowed_ips
+DICEBEAR_TYPE=$dicebear_type
+USE_GRAVATAR=$use_gravatar
+EOF
+
+            compose_file=$(cat <<EOF
+version: "3.8"
+volumes:
+  etc_wireguard:
+
+services:
+  amnezia-wg-easy:
+    env_file:
+      - .env
+    image: ghcr.io/w0rng/amnezia-wg-easy
+    container_name: amnezia-wg-easy
+    depends_on: [adguardhome]
+    volumes:
+      - etc_wireguard:/etc/wireguard
+    ports:
+      - "$wg_port:$wg_port/udp"
+      - "$port:$port/tcp"
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    dns:
+      - 10.2.0.100
+    networks:
+      private_network:
+        ipv4_address: 10.2.0.3
+
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Moscow
+    volumes:
+      - ./work:/opt/adguardhome/work
+      - $CONF_DIR:/opt/adguardhome/conf
+    networks:
+      private_network:
+        ipv4_address: 10.2.0.100
+
+networks:
+  private_network:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.2.0.0/24
+EOF
+            )
             ;;
         *)
             echo -e "${RED}Некорректный выбор${NC}"
@@ -371,7 +533,6 @@ EOF
             ;;
     esac
 
-    # Создание файла AdGuardHome.yaml
     cat <<EOF > "$CONF_DIR/AdGuardHome.yaml"
 http:
   pprof:
@@ -638,6 +799,12 @@ show_info() {
             echo -e "${GREEN}Логин: $adguard_user${NC}"
             echo -e "${GREEN}Пароль: $adguard_password${NC}"
             ;;
+        amnezia)
+            echo -e "${BLUE}Веб-интерфейс Amnezia WireGuard: http://$wg_host:$port${NC}"
+            echo -e "${BLUE}AdGuardHome доступен через VPN: http://10.2.0.100${NC}"
+            echo -e "${GREEN}Логин: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль: $adguard_password${NC}"
+            ;;
     esac
 }
 
@@ -677,26 +844,104 @@ manage_peers() {
     echo -e "${YELLOW}https://openode.ru${NC}"
 }
 
+# Функция статуса
+status() {
+    if [ -f "$WORK_DIR/docker-compose.yml" ]; then
+        echo -e "\e[48;5;202m\e[30m ================================ \e[0m"
+        echo -e "\e[48;5;202m\e[30m          DWG Service Status      \e[0m"
+        echo -e "\e[48;5;202m\e[30m ================================ \e[0m"
+        VERSION=$(get_dwg_version)
+        echo -e "${GREEN}Installed Version:${NC} $VERSION"
+
+        STATUS=$(docker compose -f "$WORK_DIR/docker-compose.yml" ps --format "{{.Name}} {{.Image}} {{.Status}} {{.Ports}}")
+        if [ -z "$STATUS" ]; then
+            echo -e "${RED}No containers running${NC}"
+        else
+            echo -e "${GREEN}Containers:${NC}"
+            echo "$STATUS" | while IFS= read -r line; do
+                NAME=$(echo "$line" | awk '{print $1}')
+                IMAGE=$(echo "$line" | awk '{print $2}')
+                STATUS=$(echo "$line" | awk '{print $3}')
+                PORTS=$(echo "$line" | awk '{$1=$2=$3=""; print substr($0, index($0,$3)+length($3)+1)}')
+                echo -e "  - ${BLUE}$NAME${NC}: $IMAGE - $STATUS"
+                [ -n "$PORTS" ] && echo -e "    ${YELLOW}Ports:${NC} $PORTS"
+            done
+        fi
+
+        echo -e "${GREEN}Node IP:${NC} $MYHOST_IP"
+        echo -e "${GREEN}Config Path:${NC} $CONF_DIR/AdGuardHome.yaml"
+        if [ "$VERSION" == "ui" ] || [ "$VERSION" == "dark" ] || [ "$VERSION" == "amnezia" ]; then
+            echo -e "${GREEN}WireGuard Web UI:${NC} http://$MYHOST_IP:$port"
+        fi
+        if [ "$VERSION" != "unknown" ]; then
+            echo -e "${GREEN}AdGuardHome:${NC} http://10.2.0.100 (via VPN)"
+        fi
+        echo -e "\e[48;5;202m\e[30m ================================ \e[0m"
+    else
+        echo -e "${RED}Контейнеры не установлены${NC}"
+    fi
+}
+
+# Новые функции
+up() {
+    if [ -f "$WORK_DIR/docker-compose.yml" ]; then
+        echo -e "${GREEN}Запуск сервисов...${NC}"
+        docker compose -f "$WORK_DIR/docker-compose.yml" up -d
+        echo -e "${GREEN}Сервисы запущены${NC}"
+    else
+        echo -e "${RED}Контейнеры не установлены${NC}"
+    fi
+}
+
+down() {
+    if [ -f "$WORK_DIR/docker-compose.yml" ]; then
+        echo -e "${GREEN}Остановка сервисов...${NC}"
+        docker compose -f "$WORK_DIR/docker-compose.yml" down
+        echo -e "${GREEN}Сервисы остановлены${NC}"
+    else
+        echo -e "${RED}Контейнеры не установлены${NC}"
+    fi
+}
+
+logs() {
+    if [ -f "$WORK_DIR/docker-compose.yml" ]; then
+        echo -e "${GREEN}Логи сервисов:${NC}"
+        docker compose -f "$WORK_DIR/docker-compose.yml" logs --tail=50
+    else
+        echo -e "${RED}Контейнеры не установлены${NC}"
+    fi
+}
+
+edit() {
+    if [ -f "$WORK_DIR/docker-compose.yml" ]; then
+        nano "$WORK_DIR/docker-compose.yml"
+    else
+        echo -e "${RED}Файл docker-compose.yml не найден${NC}"
+    fi
+}
+
+update() {
+    echo -e "${GREEN}Обновление DWG до последней версии...${NC}"
+    wget -qO /usr/local/bin/dwg "$SCRIPT_URL"
+    chmod +x /usr/local/bin/dwg
+    if [ -s /usr/local/bin/dwg ]; then
+        echo -e "${GREEN}Скрипт обновлен${NC}"
+        echo -e "${YELLOW}Перезапустите контейнеры с помощью 'dwg restart' для применения обновлений${NC}"
+    else
+        echo -e "${RED}Ошибка при обновлении скрипта${NC}"
+    fi
+}
+
+version() {
+    echo -e "${GREEN}Текущая версия DWG:${NC} $(get_dwg_version)"
+    echo -e "${YELLOW}Скрипт версии: beta2${NC}"
+}
+
 # Основная логика обработки команд
 case "$1" in
-    script-install)
-        script_install
-        ;;
-    status)
-        if [ -f "$WORK_DIR/docker-compose.yml" ]; then
-            echo -e "${GREEN}Статус контейнеров:${NC}"
-            docker compose -f "$WORK_DIR/docker-compose.yml" ps
-        else
-            echo -e "${RED}Контейнеры не установлены${NC}"
-        fi
-        ;;
-    install)
-        if [ -f "$WORK_DIR/docker-compose.yml" ]; then
-            echo -e "${YELLOW}Контейнеры уже установлены. Удалите их сначала с помощью 'dwg uninstall'${NC}"
-            exit 1
-        fi
-        install_dwg
-        ;;
+    script-install) script_install ;;
+    status) status ;;
+    install) install_dwg ;;
     uninstall)
         if [ -f "$WORK_DIR/docker-compose.yml" ]; then
             echo -e "${YELLOW}Вы уверены, что хотите удалить DWG? (y/n): ${NC}"
@@ -736,6 +981,9 @@ case "$1" in
             echo -e "${RED}Контейнеры не установлены${NC}"
         fi
         ;;
+    up) up ;;
+    down) down ;;
+    logs) logs ;;
     change-password)
         VERSION=$(get_dwg_version)
         if [ "$VERSION" == "unknown" ]; then
@@ -771,16 +1019,34 @@ case "$1" in
             echo -e "${YELLOW}Для CLI версии смена пароля wg-easy не требуется${NC}"
         fi
         ;;
-    peers)
-        VERSION=$(get_dwg_version)
-        if [ "$VERSION" == "cli" ]; then
-            manage_peers
-        else
-            echo -e "${RED}Команда peers доступна только для CLI версии${NC}"
-        fi
-        ;;
+    peers) peers ;;
+    edit) edit ;;
+    update) update ;;
+    version) version ;;
     *)
-        echo "Использование: dwg {script-install|status|install|uninstall|restart|change-password|peers}"
-        echo "Текущая версия DWG: $(get_dwg_version)"
+        echo -e "\e[48;5;202m\e[30m ================================ \e[0m"
+        echo -e "\e[48;5;202m\e[30m          DWG CLI Help            \e[0m"
+        echo -e "\e[48;5;202m\e[30m ================================ \e[0m"
+        echo -e "Usage:"
+        echo -e "  dwg [command]\n"
+        echo -e "Commands:"
+        echo -e "  script-install   – Install DWG script to /usr/local/bin"
+        echo -e "  install          – Install DWG services"
+        echo -e "  uninstall        – Uninstall DWG services"
+        echo -e "  status           – Show detailed status of services"
+        echo -e "  restart          – Restart all services"
+        echo -e "  up               – Start services"
+        echo -e "  down             – Stop services"
+        echo -e "  logs             – Show logs of services"
+        echo -e "  change-password  – Change passwords for wg-easy/AdGuardHome"
+        echo -e "  peers            – Manage WireGuard peers (CLI version only)"
+        echo -e "  edit             – Edit docker-compose.yml (via nano)"
+        echo -e "  update           – Update DWG to latest version"
+        echo -e "  version          – Show current DWG version"
+        echo -e "\nDWG Information:"
+        echo -e "  Config Path: $CONF_DIR/AdGuardHome.yaml"
+        echo -e "  Node IP: $MYHOST_IP"
+        echo -e "  Current Version: $(get_dwg_version)"
+        echo -e "\e[48;5;202m\e[30m ================================ \e[0m"
         ;;
 esac
