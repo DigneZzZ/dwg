@@ -254,8 +254,8 @@ EOF
             read -p "Порт конфигурации WireGuard (по умолчанию: 92820): " wg_config_port
             wg_config_port=${wg_config_port:-92820}
             check_port "$wg_config_port" "tcp"
-            read -p "Шаблон IP-адресов клиентов (по умолчанию: 10.8.0.x): " wg_default_address
-            wg_default_address=${wg_default_address:-10.8.0.x}
+            read -p "Шаблон IP-адресов клиентов (по умолчанию: 10.10.0.x): " wg_default_address
+            wg_default_address=${wg_default_address:-10.10.0.x}
             read -p "DNS-сервер по умолчанию (по умолчанию: 10.2.0.100 для AdGuardHome): " wg_default_dns
             wg_default_dns=${wg_default_dns:-10.2.0.100}
             read -p "MTU WireGuard (по умолчанию: 1420): " wg_mtu
@@ -269,15 +269,15 @@ EOF
             read -p "Pre-Down команда (по умолчанию: пусто): " wg_pre_down
             read -p "Post-Down команда (по умолчанию: пусто): " wg_post_down
             read -p "Включить статистику трафика в UI? (true/false, по умолчанию: false): " ui_traffic_stats
-            ui_traffic_stats=${ui_traffic_stats:-false}
+            ui_traffic_stats=${ui_traffic_stats:-true}
             read -p "Тип графиков в UI (0 - выкл, 1 - линия, 2 - область, 3 - столбцы, по умолчанию: 0): " ui_chart_type
-            ui_chart_type=${ui_chart_type:-0}
+            ui_chart_type=${ui_chart_type:-2}
             read -p "Включить одноразовые ссылки? (true/false, по умолчанию: false): " wg_enable_one_time_links
             wg_enable_one_time_links=${wg_enable_one_time_links:-false}
             read -p "Включить сортировку клиентов в UI? (true/false, по умолчанию: false): " ui_enable_sort_clients
-            ui_enable_sort_clients=${ui_enable_sort_clients:-false}
+            ui_enable_sort_clients=${ui_enable_sort_clients:-true}
             read -p "Включить время истечения для клиентов? (true/false, по умолчанию: false): " wg_enable_expires_time
-            wg_enable_expires_time=${wg_enable_expires_time:-false}
+            wg_enable_expires_time=${wg_enable_expires_time:-true}
             read -p "Включить Prometheus метрики? (true/false, по умолчанию: false): " enable_prometheus_metrics
             enable_prometheus_metrics=${enable_prometheus_metrics:-false}
             if [ "$enable_prometheus_metrics" == "true" ]; then
@@ -442,8 +442,8 @@ EOF
             language=${language:-en}
             read -p "Сетевой интерфейс (по умолчанию: eth0): " wg_device
             wg_device=${wg_device:-eth0}
-            read -p "Шаблон IP-адресов клиентов (по умолчанию: 10.8.0.x): " wg_default_address
-            wg_default_address=${wg_default_address:-10.8.0.x}
+            read -p "Шаблон IP-адресов клиентов (по умолчанию: 10.10.0.x): " wg_default_address
+            wg_default_address=${wg_default_address:-10.10.0.x}
             read -p "DNS-сервер по умолчанию (по умолчанию: 10.2.0.100 для AdGuardHome): " wg_default_dns
             wg_default_dns=${wg_default_dns:-10.2.0.100}
             read -p "Разрешенные IP (по умолчанию: 0.0.0.0/0, ::/0): " wg_allowed_ips
@@ -458,7 +458,13 @@ EOF
             read -p "Введите пароль для AdGuardHome (по умолчанию: admin): " adguard_password
             adguard_password=${adguard_password:-admin}
             adguard_hash=$(htpasswd -nbB "$adguard_user" "$adguard_password" | cut -d ":" -f 2)
-
+            read -p "Введите пароль для веб-интерфейса Amnezia (по умолчанию: amnezia123): " wg_password
+            wg_password=${wg_password:-amnezia123}
+            if [[ ! "$wg_password" =~ ^[[:alnum:]]+$ ]]; then
+                echo -e "${RED}Пароль должен содержать только буквы и цифры${NC}"
+                exit 1
+            fi
+            wg_hash=$(generate_hash "$wg_password")
             # Создание .env
             cat <<EOF > "$WORK_DIR/.env"
 WG_HOST=$wg_host
@@ -471,6 +477,7 @@ WG_DEFAULT_DNS=$wg_default_dns
 WG_ALLOWED_IPS=$wg_allowed_ips
 DICEBEAR_TYPE=$dicebear_type
 USE_GRAVATAR=$use_gravatar
+PASSWORD_HASH=$wg_hash
 EOF
 
             compose_file=$(cat <<EOF
