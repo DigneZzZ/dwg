@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# Рабочая директория
-WORK_DIR="/root/dwg"
+# Рабочая директория для контейнеров
+WORK_DIR="/opt/dwg"
+# Папка для конфигурации AdGuardHome
+CONF_DIR="$WORK_DIR/conf"
 
 # Цветовые коды
 GREEN='\033[0;32m'
@@ -16,11 +18,31 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Функция проверки доступности порта
+check_port() {
+    local port=$1
+    local proto=$2  # "tcp" или "udp"
+    if ss -tuln | grep -q ":$port "; then
+        echo -e "${RED}Порт $port ($proto) уже занят${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Порт $port ($proto) свободен${NC}"
+}
+
 # Установка зависимостей
 install_deps() {
     echo -e "${GREEN}Установка зависимостей...${NC}"
     apt update -y
-    apt install -y docker.io docker-compose qrencode apache2-utils
+    apt install -y --fix-broken
+    apt install -y docker.io docker-compose qrencode apache2-utils net-tools
+    if ! command -v docker &> /dev/null || ! docker compose version &> /dev/null; then
+        echo -e "${RED}Ошибка: Docker или Docker Compose не установлены${NC}"
+        exit 1
+    fi
+    if ! command -v htpasswd &> /dev/null; then
+        echo -e "${RED}Ошибка: htpasswd не установлен${NC}"
+        exit 1
+    fi
 }
 
 # Функция для генерации bcrypt-хэша
@@ -46,26 +68,42 @@ get_dwg_version() {
     fi
 }
 
-# Функция установки
+# Функция установки скрипта как сервиса
+script_install() {
+    echo -e "${GREEN}Установка скрипта как сервиса в /usr/local/bin/dwg...${NC}"
+    cp "$0" /usr/local/bin/dwg
+    chmod +x /usr/local/bin/dwg
+    if [ -f /usr/local/bin/dwg ]; then
+        echo -e "${GREEN}Скрипт успешно установлен${NC}"
+    else
+        echo -e "${RED}Ошибка при установке скрипта${NC}"
+        exit 1
+    fi
+}
+
+# Функция установки DWG
 install_dwg() {
-    # Проверка на Debian 10
     if grep -q "VERSION_ID=\"10\"" /etc/os-release; then
         echo -e "${RED}Этот скрипт не поддерживает Debian 10${NC}"
         exit 1
     fi
 
+    script_install
     install_deps
     mkdir -p "$WORK_DIR" && cd "$WORK_DIR" || exit 1
+    mkdir -p "$CONF_DIR" || exit 1
     MYHOST_IP=$(curl -s https://checkip.amazonaws.com/)
 
     echo "Выберите тип установки:"
     echo "1. DWG-CLI (WireGuard CLI)"
-    echo "2. DWG-UI (WireGuard с веб-интерфейсом)"
+    echo "2. DWG-UI (WireGuard с веб-интерфейсом + AdGuardHome)"
     echo "3. DWG-DARK (WG + AdGuardHome в одном контейнере)"
     read -p "Введите номер (1-3): " setup_choice
 
     case $setup_choice in
         1) # DWG-CLI
+            # Проверка портов
+            check_port 51820 "udp"
             compose_file=$(cat <<EOF
 version: "3"
 services:
@@ -106,7 +144,7 @@ services:
       - TZ=Europe/Moscow
     volumes:
       - ./work:/opt/adguardhome/work
-      - ./conf:/opt/adguardhome/conf
+      - $CONF_DIR:/opt/adguardhome/conf
     networks:
       private_network:
         ipv4_address: 10.2.0.100
@@ -119,8 +157,14 @@ networks:
         - subnet: 10.2.0.0/24
 EOF
             )
+            # Запрос логина и пароля для AdGuardHome
+            read -p "Введите логин для AdGuardHome (по умолчанию: admin): " adguard_user
+            adguard_user=${adguard_user:-admin}
+            read -p "Введите пароль для AdGuardHome (по умолчанию: admin): " adguard_password
+            adguard_password=${adguard_password:-admin}
+            adguard_hash=$(htpasswd -nbB "$adguard_user" "$adguard_password" | cut -d ":" -f 2)
             ;;
-        2) # DWG-UI
+        2) # DWG-UI с AdGuardHome
             # Обязательные параметры
             read -p "Введите пароль для wg-easy (по умолчанию: foobar123): " wg_password
             wg_password=${wg_password:-foobar123}
@@ -142,20 +186,23 @@ EOF
                 wg_host=$MYHOST_IP
             fi
 
-            # Опциональные параметры
+            # Опциональные параметры с проверкой портов
             echo -e "${YELLOW}Настройка опциональных параметров:${NC}"
             read -p "Выберите язык интерфейса (en, ru, fr и т.д., по умолчанию: en): " lang
             lang=${lang:-en}
             read -p "Порт веб-интерфейса (по умолчанию: 51821): " port
             port=${port:-51821}
+            check_port "$port" "tcp"
             read -p "Порт WireGuard (по умолчанию: 51820): " wg_port
             wg_port=${wg_port:-51820}
+            check_port "$wg_port" "udp"
             read -p "Порт конфигурации WireGuard (по умолчанию: 92820): " wg_config_port
             wg_config_port=${wg_config_port:-92820}
+            check_port "$wg_config_port" "tcp"
             read -p "Шаблон IP-адресов клиентов (по умолчанию: 10.8.0.x): " wg_default_address
             wg_default_address=${wg_default_address:-10.8.0.x}
-            read -p "DNS-сервер по умолчанию (по умолчанию: 1.1.1.1): " wg_default_dns
-            wg_default_dns=${wg_default_dns:-1.1.1.1}
+            read -p "DNS-сервер по умолчанию (по умолчанию: 10.2.0.100 для AdGuardHome): " wg_default_dns
+            wg_default_dns=${wg_default_dns:-10.2.0.100}
             read -p "MTU WireGuard (по умолчанию: 1420): " wg_mtu
             wg_mtu=${wg_mtu:-1420}
             read -p "Разрешенные IP (по умолчанию: 0.0.0.0/0, ::/0): " wg_allowed_ips
@@ -184,6 +231,13 @@ EOF
                 prometheus_hash=$(generate_hash "$prometheus_password")
             fi
 
+            # Запрос логина и пароля для AdGuardHome
+            read -p "Введите логин для AdGuardHome (по умолчанию: admin): " adguard_user
+            adguard_user=${adguard_user:-admin}
+            read -p "Введите пароль для AdGuardHome (по умолчанию: admin): " adguard_password
+            adguard_password=${adguard_password:-admin}
+            adguard_hash=$(htpasswd -nbB "$adguard_user" "$adguard_password" | cut -d ":" -f 2)
+
             compose_file=$(cat <<EOF
 version: "3.8"
 volumes:
@@ -193,6 +247,7 @@ services:
   wg-easy:
     image: ghcr.io/wg-easy/wg-easy
     container_name: wg-easy
+    depends_on: [adguardhome]
     volumes:
       - etc_wireguard:/etc/wireguard
     ports:
@@ -205,6 +260,11 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
+    dns:
+      - 10.2.0.100
+    networks:
+      private_network:
+        ipv4_address: 10.2.0.3
     environment:
       - LANG=$lang
       - WG_HOST=$wg_host
@@ -230,8 +290,33 @@ EOF
             compose_file+=$(echo -e "\n      - WG_ENABLE_EXPIRES_TIME=$wg_enable_expires_time")
             compose_file+=$(echo -e "\n      - ENABLE_PROMETHEUS_METRICS=$enable_prometheus_metrics")
             [ "$enable_prometheus_metrics" == "true" ] && compose_file+=$(echo -e "\n      - PROMETHEUS_METRICS_PASSWORD=$prometheus_hash")
+            compose_file+=$(cat <<EOF
+
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Moscow
+    volumes:
+      - ./work:/opt/adguardhome/work
+      - $CONF_DIR:/opt/adguardhome/conf
+    networks:
+      private_network:
+        ipv4_address: 10.2.0.100
+
+networks:
+  private_network:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.2.0.0/24
+EOF
+            )
             ;;
         3) # DWG-DARK
+            check_port 51820 "udp"
+            check_port 51821 "tcp"
             compose_file=$(cat <<EOF
 version: "3.8"
 services:
@@ -251,7 +336,7 @@ services:
       - WG_MTU=1280
     volumes:
       - ./work:/opt/adwireguard/work
-      - ./conf:/opt/adwireguard/conf
+      - $CONF_DIR:/opt/adguardhome/conf
       - ./wireguard:/etc/wireguard
     cap_add:
       - NET_ADMIN
@@ -272,15 +357,12 @@ networks:
         - subnet: 10.2.0.0/24
 EOF
             )
-            mkdir -p conf
-            cat <<EOF > conf/AdGuardHome.yaml
-users:
-  - name: admin
-    password: $(htpasswd -nbB admin "admin" | cut -d ":" -f 2)
-dns:
-  bind_hosts:
-    - 0.0.0.0
-EOF
+            # Запрос логина и пароля для AdGuardHome в DWG-DARK
+            read -p "Введите логин для AdGuardHome (по умолчанию: admin): " adguard_user
+            adguard_user=${adguard_user:-admin}
+            read -p "Введите пароль для AdGuardHome (по умолчанию: admin): " adguard_password
+            adguard_password=${adguard_password:-admin}
+            adguard_hash=$(htpasswd -nbB "$adguard_user" "$adguard_password" | cut -d ":" -f 2)
             ;;
         *)
             echo -e "${RED}Некорректный выбор${NC}"
@@ -288,8 +370,245 @@ EOF
             ;;
     esac
 
+    # Создание файла AdGuardHome.yaml
+    cat <<EOF > "$CONF_DIR/AdGuardHome.yaml"
+http:
+  pprof:
+    port: 6060
+    enabled: false
+  address: 0.0.0.0:80
+  session_ttl: 720h
+users:
+  - name: $adguard_user
+    password: $adguard_hash
+auth_attempts: 5
+block_auth_min: 15
+http_proxy: ""
+language: ""
+theme: auto
+dns:
+  bind_hosts:
+    - 0.0.0.0
+  port: 53
+  anonymize_client_ip: false
+  ratelimit: 20
+  ratelimit_subnet_len_ipv4: 24
+  ratelimit_subnet_len_ipv6: 56
+  ratelimit_whitelist: []
+  refuse_any: true
+  upstream_dns:
+    - https://cloudflare-dns.com/dns-query
+    - https://dns.adguard-dns.com/dns-query
+    - https://dns.quad9.net/dns-query
+  upstream_dns_file: ""
+  bootstrap_dns:
+    - 9.9.9.10
+    - 149.112.112.10
+    - 2620:fe::10
+    - 2620:fe::fe:10
+  fallback_dns:
+    - https://dns.quad9.net/dns-query
+    - quic://unfiltered.adguard-dns.com
+  upstream_mode: parallel
+  fastest_timeout: 1s
+  allowed_clients: []
+  disallowed_clients: []
+  blocked_hosts:
+    - version.bind
+    - id.server
+    - hostname.bind
+  trusted_proxies:
+    - 127.0.0.0/8
+    - ::1/128
+  cache_size: 4194304
+  cache_ttl_min: 0
+  cache_ttl_max: 0
+  cache_optimistic: false
+  bogus_nxdomain: []
+  aaaa_disabled: false
+  enable_dnssec: false
+  edns_client_subnet:
+    custom_ip: ""
+    enabled: false
+    use_custom: false
+  max_goroutines: 300
+  handle_ddr: true
+  ipset: []
+  ipset_file: ""
+  bootstrap_prefer_ipv6: false
+  upstream_timeout: 10s
+  private_networks: []
+  use_private_ptr_resolvers: false
+  local_ptr_upstreams: []
+  use_dns64: false
+  dns64_prefixes: []
+  serve_http3: false
+  use_http3_upstreams: false
+  serve_plain_dns: true
+  hostsfile_enabled: true
+tls:
+  enabled: false
+  server_name: ""
+  force_https: false
+  port_https: 443
+  port_dns_over_tls: 853
+  port_dns_over_quic: 853
+  port_dnscrypt: 0
+  dnscrypt_config_file: ""
+  allow_unencrypted_doh: false
+  certificate_chain: ""
+  private_key: ""
+  certificate_path: ""
+  private_key_path: ""
+  strict_sni_check: false
+querylog:
+  dir_path: ""
+  ignored: []
+  interval: 24h
+  size_memory: 1000
+  enabled: true
+  file_enabled: true
+statistics:
+  dir_path: ""
+  ignored: []
+  interval: 24h
+  enabled: true
+filters:
+  - enabled: true
+    url: https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
+    name: AdGuard DNS filter
+    id: 1
+  - enabled: true
+    url: https://adaway.org/hosts.txt
+    name: AdAway Default Blocklist
+    id: 2
+  - enabled: true
+    url: https://easylist-downloads.adblockplus.org/advblock.txt
+    name: RuAdlist
+    id: 1670584470
+  - enabled: false
+    url: https://easylist-downloads.adblockplus.org/bitblock.txt
+    name: BitBlock
+    id: 1670584471
+  - enabled: true
+    url: https://easylist-downloads.adblockplus.org/cntblock.txt
+    name: cntblock
+    id: 1670584472
+  - enabled: true
+    url: https://easylist-downloads.adblockplus.org/easylist.txt
+    name: easyList
+    id: 1670584473
+  - enabled: false
+    url: https://schakal.ru/hosts/alive_hosts_ru_com.txt
+    name: то же без неотвечающих хостов и доменов вне зон RU, NET и COM
+    id: 1677533164
+  - enabled: true
+    url: https://schakal.ru/hosts/hosts_mail_fb.txt
+    name: файл с разблокированными r.mail.ru и graph.facebook.com
+    id: 1677533165
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
+    name: AdGuard DNS filter
+    id: 1726948599
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_59.txt
+    name: AdGuard DNS Popup Hosts filter
+    id: 1726948600
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_27.txt
+    name: OISD Blocklist Big
+    id: 1726948601
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_24.txt
+    name: 1Hosts (Lite)
+    id: 1726948602
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_10.txt
+    name: Scam Blocklist by DurableNapkin
+    id: 1726948603
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_11.txt
+    name: Malicious URL Blocklist (URLHaus)
+    id: 1726948604
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_50.txt
+    name: uBlock₀ filters – Badware risks
+    id: 1726948605
+whitelist_filters: []
+user_rules: []
+dhcp:
+  enabled: false
+  interface_name: ""
+  local_domain_name: lan
+  dhcpv4:
+    gateway_ip: ""
+    subnet_mask: ""
+    range_start: ""
+    range_end: ""
+    lease_duration: 86400
+    icmp_timeout_msec: 1000
+    options: []
+  dhcpv6:
+    range_start: ""
+    lease_duration: 86400
+    ra_slaac_only: false
+    ra_allow_slaac: false
+filtering:
+  blocking_ipv4: ""
+  blocking_ipv6: ""
+  blocked_services:
+    schedule:
+      time_zone: America/Los_Angeles
+    ids: []
+  protection_disabled_until: null
+  safe_search:
+    enabled: false
+    bing: true
+    duckduckgo: true
+    google: true
+    pixabay: true
+    yandex: true
+    youtube: true
+  blocking_mode: default
+  parental_block_host: family-block.dns.adguard.com
+  safebrowsing_block_host: standard-block.dns.adguard.com
+  rewrites: []
+  safebrowsing_cache_size: 1048576
+  safesearch_cache_size: 1048576
+  parental_cache_size: 1048576
+  cache_time: 30
+  filters_update_interval: 24
+  blocked_response_ttl: 10
+  filtering_enabled: true
+  parental_enabled: false
+  safebrowsing_enabled: false
+  protection_enabled: true
+clients:
+  runtime_sources:
+    whois: true
+    arp: true
+    rdns: true
+    dhcp: true
+    hosts: true
+  persistent: []
+log:
+  enabled: true
+  file: ""
+  max_backups: 0
+  max_size: 100
+  max_age: 3
+  compress: false
+  local_time: false
+  verbose: false
+os:
+  group: ""
+  user: ""
+  rlimit_nofile: 0
+schema_version: 28
+EOF
+
     echo "$compose_file" > "$WORK_DIR/docker-compose.yml"
-    docker-compose up -d
+    docker compose up -d
     echo -e "${GREEN}Установка завершена${NC}"
     show_info
 }
@@ -301,17 +620,22 @@ show_info() {
         cli)
             echo -e "${BLUE}Для управления WireGuard: 'dwg peers' или 'docker exec -it wireguard wg'${NC}"
             echo -e "${BLUE}AdGuardHome доступен через VPN: http://10.2.0.100${NC}"
+            echo -e "${GREEN}Логин: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль: $adguard_password${NC}"
             ;;
         ui)
             echo -e "${BLUE}Веб-интерфейс WireGuard: http://$wg_host:$port${NC}"
             echo -e "${GREEN}Пароль: $wg_password${NC}"
+            echo -e "${BLUE}AdGuardHome доступен через VPN: http://10.2.0.100${NC}"
+            echo -e "${GREEN}Логин: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль: $adguard_password${NC}"
             ;;
         dark)
             echo -e "${BLUE}Веб-интерфейс WireGuard: http://$MYHOST_IP:51821${NC}"
             echo -e "${GREEN}Пароль wg-easy: openode${NC}"
             echo -e "${BLUE}AdGuardHome через VPN: http://10.2.0.100${NC}"
-            echo -e "${GREEN}Логин: admin${NC}"
-            echo -e "${GREEN}Пароль: admin${NC}"
+            echo -e "${GREEN}Логин: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль: $adguard_password${NC}"
             ;;
     esac
 }
@@ -354,10 +678,13 @@ manage_peers() {
 
 # Основная логика обработки команд
 case "$1" in
+    script-install)
+        script_install
+        ;;
     status)
         if [ -f "$WORK_DIR/docker-compose.yml" ]; then
             echo -e "${GREEN}Статус контейнеров:${NC}"
-            docker-compose -f "$WORK_DIR/docker-compose.yml" ps
+            docker compose -f "$WORK_DIR/docker-compose.yml" ps
         else
             echo -e "${RED}Контейнеры не установлены${NC}"
         fi
@@ -371,9 +698,29 @@ case "$1" in
         ;;
     uninstall)
         if [ -f "$WORK_DIR/docker-compose.yml" ]; then
+            echo -e "${YELLOW}Вы уверены, что хотите удалить DWG? (y/n): ${NC}"
+            read confirm1
+            if [ "$confirm1" != "y" ]; then
+                echo -e "${GREEN}Удаление отменено${NC}"
+                exit 0
+            fi
+            echo -e "${YELLOW}Подтвердите удаление DWG еще раз (y/n): ${NC}"
+            read confirm2
+            if [ "$confirm2" != "y" ]; then
+                echo -e "${GREEN}Удаление отменено${NC}"
+                exit 0
+            fi
             echo -e "${GREEN}Удаление контейнеров и томов...${NC}"
-            docker-compose -f "$WORK_DIR/docker-compose.yml" down -v
-            rm -rf "$WORK_DIR"/*
+            docker compose -f "$WORK_DIR/docker-compose.yml" down -v
+            echo -e "${YELLOW}Удалить папку $WORK_DIR полностью? (y/n): ${NC}"
+            read remove_dir
+            if [ "$remove_dir" == "y" ]; then
+                rm -rf "$WORK_DIR"
+                echo -e "${GREEN}Папка $WORK_DIR удалена${NC}"
+            else
+                rm -f "$WORK_DIR/docker-compose.yml"
+                echo -e "${GREEN}Только docker-compose.yml удален, папка $WORK_DIR сохранена${NC}"
+            fi
             echo -e "${GREEN}Удаление завершено${NC}"
         else
             echo -e "${RED}Нечего удалять${NC}"
@@ -382,7 +729,7 @@ case "$1" in
     restart)
         if [ -f "$WORK_DIR/docker-compose.yml" ]; then
             echo -e "${GREEN}Перезапуск контейнеров...${NC}"
-            docker-compose -f "$WORK_DIR/docker-compose.yml" restart
+            docker compose -f "$WORK_DIR/docker-compose.yml" restart
             echo -e "${GREEN}Перезапуск завершен${NC}"
         else
             echo -e "${RED}Контейнеры не установлены${NC}"
@@ -400,27 +747,27 @@ case "$1" in
             echo
             hash=$(generate_hash "$new_password")
             sed -i "s/PASSWORD_HASH=.*/PASSWORD_HASH=$hash/" "$WORK_DIR/docker-compose.yml"
-            docker-compose -f "$WORK_DIR/docker-compose.yml" restart
+            docker compose -f "$WORK_DIR/docker-compose.yml" restart
             echo -e "${GREEN}Пароль для wg-easy обновлен${NC}"
         fi
-        if [ "$VERSION" == "dark" ]; then
+        if [ "$VERSION" == "ui" ] || [ "$VERSION" == "dark" ] || [ "$VERSION" == "cli" ]; then
             echo -en "${YELLOW}Введите новый логин для AdGuardHome (Enter для сохранения текущего): ${NC}"
             read new_adguard_user
             echo -en "${YELLOW}Введите новый пароль для AdGuardHome: ${NC}"
             read -s new_adguard_password
             echo
-            if [ -n "$new_adguard_user" ]; then
-                sed -i "s/name: .*/name: $new_adguard_user/" "$WORK_DIR/conf/AdGuardHome.yaml"
+            if [ -n "$new_adguard_user" ] || [ -n "$new_adguard_password" ]; then
+                new_adguard_user=${new_adguard_user:-$(grep "name:" "$CONF_DIR/AdGuardHome.yaml" | awk '{print $2}')}
+                new_adguard_password=${new_adguard_password:-$(grep "password:" "$CONF_DIR/AdGuardHome.yaml" | awk '{print $2}')}
+                adguard_hash=$(htpasswd -nbB "$new_adguard_user" "$new_adguard_password" | cut -d ":" -f 2)
+                sed -i "s/name: .*/name: $new_adguard_user/" "$CONF_DIR/AdGuardHome.yaml"
+                sed -i "s/password: .*/password: $adguard_hash/" "$CONF_DIR/AdGuardHome.yaml"
+                docker compose -f "$WORK_DIR/docker-compose.yml" restart adguardhome 2>/dev/null || docker compose -f "$WORK_DIR/docker-compose.yml" restart adwireguard
+                echo -e "${GREEN}Пароль для AdGuardHome обновлен${NC}"
             fi
-            if [ -n "$new_adguard_password" ]; then
-                adguard_hash=$(htpasswd -nbB "${new_adguard_user:-admin}" "$new_adguard_password" | cut -d ":" -f 2)
-                sed -i "s/password: .*/password: $adguard_hash/" "$WORK_DIR/conf/AdGuardHome.yaml"
-            fi
-            docker-compose -f "$WORK_DIR/docker-compose.yml" restart adwireguard
-            echo -e "${GREEN}Пароль для AdGuardHome обновлен${NC}"
         fi
-        if [ "$VERSION" == "cli" ]; then
-            echo -e "${YELLOW}Для CLI версии смена пароля не требуется${NC}"
+        if [ "$VERSION" == "cli" ] && [ -z "$new_adguard_user" ] && [ -z "$new_adguard_password" ]; then
+            echo -e "${YELLOW}Для CLI версии смена пароля wg-easy не требуется${NC}"
         fi
         ;;
     peers)
@@ -432,7 +779,7 @@ case "$1" in
         fi
         ;;
     *)
-        echo "Использование: dwg {status|install|uninstall|restart|change-password|peers}"
+        echo "Использование: dwg {script-install|status|install|uninstall|restart|change-password|peers}"
         echo "Текущая версия DWG: $(get_dwg_version)"
         ;;
 esac
