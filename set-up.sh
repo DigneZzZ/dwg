@@ -129,6 +129,22 @@ install_dwg() {
         exit 1
     fi
 
+    # Проверка на наличие установленной конфигурации
+    if [ -f "$WORK_DIR/docker-compose.yml" ]; then
+        echo -e "${YELLOW}DWG уже установлен (версия: $(get_dwg_version)).${NC}"
+        echo -e "${YELLOW}Хотите переустановить? Это удалит текущие контейнеры и данные (y/n): ${NC}"
+        read reinstall
+        if [ "$reinstall" == "y" ]; then
+            echo -e "${GREEN}Остановка и удаление текущих контейнеров...${NC}"
+            docker compose -f "$WORK_DIR/docker-compose.yml" down -v
+            rm -rf "$WORK_DIR"/*
+            echo -e "${GREEN}Текущая установка удалена${NC}"
+        else
+            echo -e "${GREEN}Установка отменена${NC}"
+            exit 0
+        fi
+    fi
+
     script_install
     install_deps
     mkdir -p "$WORK_DIR" && cd "$WORK_DIR" || exit 1
