@@ -7,7 +7,7 @@ SCRIPT_URL="https://raw.githubusercontent.com/DigneZzZ/dwg/refs/heads/main/beta2
 WORK_DIR="/opt/dwg"
 # Папка для конфигурации AdGuardHome
 CONF_DIR="$WORK_DIR/conf"
-
+MYHOST_IP=$(curl -s https://checkip.amazonaws.com/)
 # Цветовые коды
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -815,6 +815,62 @@ show_info() {
     esac
 }
 
+
+# Функция для удаления конфигурации AdGuardHome и перезапуска контейнера
+reset_adguard_config() {
+    if [ -f "$CONF_DIR/AdGuardHome.yaml" ]; then
+        echo -e "${YELLOW}Вы уверены, что хотите удалить файл конфигурации AdGuardHome? Это сбросит все настройки! (y/n): ${NC}"
+        read confirm
+        if [ "$confirm" == "y" ]; then
+            echo -e "${GREEN}Удаление файла $CONF_DIR/AdGuardHome.yaml...${NC}"
+            rm -f "$CONF_DIR/AdGuardHome.yaml"
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}Файл успешно удален${NC}"
+            else
+                echo -e "${RED}Ошибка при удалении файла${NC}"
+                exit 1
+            fi
+
+            # Проверка существования docker-compose.yml
+            if [ -f "$WORK_DIR/docker-compose.yml" ]; then
+                echo -e "${GREEN}Перезапуск контейнера AdGuardHome...${NC}"
+                VERSION=$(get_dwg_version)
+                if [ "$VERSION" == "dark" ]; then
+                    docker compose -f "$WORK_DIR/docker-compose.yml" restart adwireguard
+                else
+                    docker compose -f "$WORK_DIR/docker-compose.yml" restart adguardhome
+                fi
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}Контейнер AdGuardHome перезапущен${NC}"
+                else
+                    echo -e "${RED}Ошибка при перезапуске контейнера${NC}"
+                    exit 1
+                fi
+
+                # Инструкции после сброса
+                echo -e "\n${YELLOW}Конфигурация AdGuardHome сброшена. Что делать дальше:${NC}"
+                echo -e "1. ${GREEN}Подключитесь к сети WireGuard${NC}, используя конфигурацию вашего клиента."
+                echo -e "   - Если вы используете DWG-CLI, сгенерируйте конфигурацию с помощью 'dwg peers'."
+                echo -e "   - Для других версий (UI, DARK, A) используйте веб-интерфейс WireGuard для создания клиента."
+                echo -e "2. ${GREEN}Откройте браузер и перейдите по адресу:${NC} http://10.2.0.100"
+                echo -e "   - Это внутренний IP-адрес AdGuardHome, доступный через VPN."
+                echo -e "3. ${GREEN}Выполните стандартную настройку AdGuardHome через веб-интерфейс:${NC}"
+                echo -e "   - Укажите логин и пароль (по умолчанию после сброса: admin/admin)."
+                echo -e "   - Настройте DNS-серверы (например, upstream DNS: https://cloudflare-dns.com/dns-query)."
+                echo -e "   - Сохраните настройки и проверьте подключение."
+                echo -e "${YELLOW}Примечание:${NC} Если проблемы с DNS сохраняются, убедитесь, что WireGuard работает корректно."
+            else
+                echo -e "${RED}Файл docker-compose.yml не найден, контейнер не перезапущен${NC}"
+            fi
+        else
+            echo -e "${GREEN}Действие отменено${NC}"
+        fi
+    else
+        echo -e "${RED}Файл $CONF_DIR/AdGuardHome.yaml не найден${NC}"
+        echo -e "${YELLOW}Если установка DWG не завершилась из-за проблем с DNS, выполните 'dwg install' заново после проверки сети.${NC}"
+    fi
+}
+
 # Функция управления пирами (CLI версия)
 manage_peers() {
     wg_conf_path="$WORK_DIR/wireguard/wg_confs/wg0.conf"
@@ -948,6 +1004,7 @@ version() {
 case "$1" in
     script-install) script_install ;;
     status) status ;;
+    reset-adguard-config) reset_adguard_config ;; 
     install) install_dwg ;;
     uninstall)
         if [ -f "$WORK_DIR/docker-compose.yml" ]; then
@@ -1046,6 +1103,7 @@ case "$1" in
         echo -e "  down             – Stop services"
         echo -e "  logs             – Show logs of services"
         echo -e "  change-password  – Change passwords for wg-easy/AdGuardHome"
+        echo -e "  reset-adguard-config – Reset AdGuardHome config and restart container"
         echo -e "  peers            – Manage WireGuard peers (CLI version only)"
         echo -e "  edit             – Edit docker-compose.yml (via nano)"
         echo -e "  update           – Update DWG to latest version"
