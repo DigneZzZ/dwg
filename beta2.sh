@@ -71,12 +71,13 @@ get_dwg_version() {
 # Функция установки скрипта как сервиса
 script_install() {
     echo -e "${GREEN}Установка скрипта как сервиса в /usr/local/bin/dwg...${NC}"
-    cp "$0" /usr/local/bin/dwg
+    # Скачиваем скрипт напрямую в /usr/local/bin/dwg
+    wget -qO /usr/local/bin/dwg https://raw.githubusercontent.com/DigneZzZ/dwg/main/beta2.sh
     chmod +x /usr/local/bin/dwg
-    if [ -f /usr/local/bin/dwg ]; then
+    if [ -s /usr/local/bin/dwg ]; then  # Проверяем, что файл не пустой
         echo -e "${GREEN}Скрипт успешно установлен${NC}"
     else
-        echo -e "${RED}Ошибка при установке скрипта${NC}"
+        echo -e "${RED}Ошибка при установке скрипта: файл пустой или не скачан${NC}"
         exit 1
     fi
 }
