@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # URL для загрузки скрипта
-SCRIPT_URL="https://raw.githubusercontent.com/DigneZzZ/dwg/main/set-up.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/DigneZzZ/dwg/refs/heads/main/set-up.sh"
 
 # Рабочая директория для контейнеров
 WORK_DIR="/opt/dwg"
