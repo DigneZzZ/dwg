@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # URL для загрузки скрипта
-SCRIPT_URL="https://raw.githubusercontent.com/DigneZzZ/dwg/refs/heads/main/set-up.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/DigneZzZ/dwg/refs/heads/main/beta2.sh"
 
 # Рабочая директория для контейнеров
 WORK_DIR="/opt/dwg"
 # Папка для конфигурации AdGuardHome
 CONF_DIR="$WORK_DIR/conf"
-
+MYHOST_IP=$(curl -s https://checkip.amazonaws.com/)
 # Цветовые коды
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -54,7 +54,8 @@ install_deps() {
     # Проверка версии Docker Compose
     if ! docker compose version &> /dev/null; then
         echo -e "${YELLOW}Docker Compose не установлен, обеспечиваем поддержку...${NC}"
-
+        # Плагин Docker Compose V2 уже включен в get-docker.sh для новых версий Docker
+        # Если по какой-то причине не работает, устанавливаем вручную
         if ! docker compose version &> /dev/null; then
             echo -e "${YELLOW}Установка плагина docker-compose-plugin...${NC}"
             apt install -y docker-compose-plugin
@@ -116,7 +117,9 @@ get_dwg_version() {
         echo "unknown"
         return
     fi
-    if grep -q "wg-easy" "$WORK_DIR/docker-compose.yml"; then
+    if grep -q "amnezia-wg-easy" "$WORK_DIR/docker-compose.yml"; then
+        echo "amnezia"
+    elif grep -q "wg-easy" "$WORK_DIR/docker-compose.yml"; then
         echo "ui"
     elif grep -q "adwireguard" "$WORK_DIR/docker-compose.yml"; then
         echo "dark"
@@ -147,7 +150,6 @@ install_dwg() {
         exit 1
     fi
 
-    # Проверка на наличие установленной конфигурации
     if [ -f "$WORK_DIR/docker-compose.yml" ]; then
         echo -e "${YELLOW}DWG уже установлен (версия: $(get_dwg_version)).${NC}"
         echo -e "${YELLOW}Хотите переустановить? Это удалит текущие контейнеры и данные (y/n): ${NC}"
@@ -173,7 +175,8 @@ install_dwg() {
     echo "1. DWG-CLI (WireGuard CLI)"
     echo "2. DWG-UI (WireGuard с веб-интерфейсом + AdGuardHome)"
     echo "3. DWG-DARK (WG + AdGuardHome в одном контейнере)"
-    read -p "Введите номер (1-3): " setup_choice
+    echo "4. DWG-A (DWG-Amnezia + AdGuardHome)"
+    read -p "Введите номер (1-4): " setup_choice
 
     case $setup_choice in
         1) # DWG-CLI
@@ -270,8 +273,8 @@ EOF
             read -p "Порт конфигурации WireGuard (по умолчанию: 92820): " wg_config_port
             wg_config_port=${wg_config_port:-92820}
             check_port "$wg_config_port" "tcp"
-            read -p "Шаблон IP-адресов клиентов (по умолчанию: 10.8.0.x): " wg_default_address
-            wg_default_address=${wg_default_address:-10.8.0.x}
+            read -p "Шаблон IP-адресов клиентов (по умолчанию: 10.10.0.x): " wg_default_address
+            wg_default_address=${wg_default_address:-10.10.0.x}
             read -p "DNS-сервер по умолчанию (по умолчанию: 10.2.0.100 для AdGuardHome): " wg_default_dns
             wg_default_dns=${wg_default_dns:-10.2.0.100}
             read -p "MTU WireGuard (по умолчанию: 1420): " wg_mtu
@@ -285,15 +288,15 @@ EOF
             read -p "Pre-Down команда (по умолчанию: пусто): " wg_pre_down
             read -p "Post-Down команда (по умолчанию: пусто): " wg_post_down
             read -p "Включить статистику трафика в UI? (true/false, по умолчанию: false): " ui_traffic_stats
-            ui_traffic_stats=${ui_traffic_stats:-false}
+            ui_traffic_stats=${ui_traffic_stats:-true}
             read -p "Тип графиков в UI (0 - выкл, 1 - линия, 2 - область, 3 - столбцы, по умолчанию: 0): " ui_chart_type
-            ui_chart_type=${ui_chart_type:-0}
+            ui_chart_type=${ui_chart_type:-2}
             read -p "Включить одноразовые ссылки? (true/false, по умолчанию: false): " wg_enable_one_time_links
             wg_enable_one_time_links=${wg_enable_one_time_links:-false}
             read -p "Включить сортировку клиентов в UI? (true/false, по умолчанию: false): " ui_enable_sort_clients
-            ui_enable_sort_clients=${ui_enable_sort_clients:-false}
+            ui_enable_sort_clients=${ui_enable_sort_clients:-true}
             read -p "Включить время истечения для клиентов? (true/false, по умолчанию: false): " wg_enable_expires_time
-            wg_enable_expires_time=${wg_enable_expires_time:-false}
+            wg_enable_expires_time=${wg_enable_expires_time:-true}
             read -p "Включить Prometheus метрики? (true/false, по умолчанию: false): " enable_prometheus_metrics
             enable_prometheus_metrics=${enable_prometheus_metrics:-false}
             if [ "$enable_prometheus_metrics" == "true" ]; then
@@ -432,6 +435,123 @@ EOF
             read -p "Введите пароль для AdGuardHome (по умолчанию: admin): " adguard_password
             adguard_password=${adguard_password:-admin}
             adguard_hash=$(htpasswd -nbB "$adguard_user" "$adguard_password" | cut -d ":" -f 2)
+            ;;
+        4) # DWG-A (DWG-Amnezia) с AdGuardHome
+            echo -e "${YELLOW}Ваш внешний IP-адрес: $MYHOST_IP${NC}"
+            read -p "Использовать внешний IP ($MYHOST_IP) или указать свой домен для Amnezia? (ip/domain, по умолчанию: ip): " host_choice
+            host_choice=${host_choice:-ip}
+            if [ "$host_choice" == "domain" ]; then
+                read -p "Введите ваш домен (например, my.domain.com): " wg_host
+                if [ -z "$wg_host" ]; then
+                    echo -e "${RED}Домен не указан, используется внешний IP${NC}"
+                    wg_host=$MYHOST_IP
+                fi
+            else
+                wg_host=$MYHOST_IP
+            fi
+
+            echo -e "${YELLOW}Настройка параметров для DWG-Amnezia:${NC}"
+            read -p "Порт веб-интерфейса (по умолчанию: 51821): " port
+            port=${port:-51821}
+            check_port "$port" "tcp"
+            read -p "Порт WireGuard (по умолчанию: 51820): " wg_port
+            wg_port=${wg_port:-51820}
+            check_port "$wg_port" "udp"
+            read -p "Язык интерфейса (en, ru, tr и т.д., по умолчанию: en): " language
+            language=${language:-en}
+            read -p "Сетевой интерфейс (по умолчанию: eth0): " wg_device
+            wg_device=${wg_device:-eth0}
+            read -p "Шаблон IP-адресов клиентов (по умолчанию: 10.10.0.x): " wg_default_address
+            wg_default_address=${wg_default_address:-10.10.0.x}
+            read -p "DNS-сервер по умолчанию (по умолчанию: 10.2.0.100 для AdGuardHome): " wg_default_dns
+            wg_default_dns=${wg_default_dns:-10.2.0.100}
+            read -p "Разрешенные IP (по умолчанию: 0.0.0.0/0, ::/0): " wg_allowed_ips
+            wg_allowed_ips=${wg_allowed_ips:-"0.0.0.0/0, ::/0"}
+            read -p "Тип аватаров Dicebear (по умолчанию: bottts): " dicebear_type
+            dicebear_type=${dicebear_type:-bottts}
+            read -p "Использовать Gravatar? (true/false, по умолчанию: true): " use_gravatar
+            use_gravatar=${use_gravatar:-true}
+
+            read -p "Введите логин для AdGuardHome (по умолчанию: admin): " adguard_user
+            adguard_user=${adguard_user:-admin}
+            read -p "Введите пароль для AdGuardHome (по умолчанию: admin): " adguard_password
+            adguard_password=${adguard_password:-admin}
+            adguard_hash=$(htpasswd -nbB "$adguard_user" "$adguard_password" | cut -d ":" -f 2)
+            read -p "Введите пароль для веб-интерфейса Amnezia (по умолчанию: amnezia123): " wg_password
+            wg_password=${wg_password:-amnezia123}
+            if [[ ! "$wg_password" =~ ^[[:alnum:]]+$ ]]; then
+                echo -e "${RED}Пароль должен содержать только буквы и цифры${NC}"
+                exit 1
+            fi
+            wg_hash=$(generate_hash "$wg_password")
+            # Создание .env
+            cat <<EOF > "$WORK_DIR/.env"
+WG_HOST=$wg_host
+LANGUAGE=$language
+PORT=$port
+WG_DEVICE=$wg_device
+WG_PORT=$wg_port
+WG_DEFAULT_ADDRESS=$wg_default_address
+WG_DEFAULT_DNS=$wg_default_dns
+WG_ALLOWED_IPS=$wg_allowed_ips
+DICEBEAR_TYPE=$dicebear_type
+USE_GRAVATAR=$use_gravatar
+PASSWORD_HASH=$wg_hash
+EOF
+
+            compose_file=$(cat <<EOF
+version: "3.8"
+volumes:
+  etc_wireguard:
+
+services:
+  amnezia-wg-easy:
+    env_file:
+      - .env
+    image: ghcr.io/w0rng/amnezia-wg-easy
+    container_name: amnezia-wg-easy
+    depends_on: [adguardhome]
+    volumes:
+      - etc_wireguard:/etc/wireguard
+    ports:
+      - "$wg_port:$wg_port/udp"
+      - "$port:$port/tcp"
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    dns:
+      - 10.2.0.100
+    networks:
+      private_network:
+        ipv4_address: 10.2.0.3
+
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Moscow
+    volumes:
+      - ./work:/opt/adguardhome/work
+      - $CONF_DIR:/opt/adguardhome/conf
+    networks:
+      private_network:
+        ipv4_address: 10.2.0.100
+
+networks:
+  private_network:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.2.0.0/24
+EOF
+            )
             ;;
         *)
             echo -e "${RED}Некорректный выбор${NC}"
@@ -688,24 +808,87 @@ show_info() {
         cli)
             echo -e "${BLUE}Для управления WireGuard: 'dwg peers' или 'docker exec -it wireguard wg'${NC}"
             echo -e "${BLUE}AdGuardHome доступен через VPN: http://10.2.0.100${NC}"
-            echo -e "${GREEN}Логин: $adguard_user${NC}"
-            echo -e "${GREEN}Пароль: $adguard_password${NC}"
+            echo -e "${GREEN}Логин AdGuardHome: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль AdGuardHome: $adguard_password${NC}"
             ;;
         ui)
             echo -e "${BLUE}Веб-интерфейс WireGuard: http://$wg_host:$port${NC}"
-            echo -e "${GREEN}Пароль: $wg_password${NC}"
+            echo -e "${GREEN}Пароль WG-EASY: $wg_password${NC}"
             echo -e "${BLUE}AdGuardHome доступен через VPN: http://10.2.0.100${NC}"
-            echo -e "${GREEN}Логин: $adguard_user${NC}"
-            echo -e "${GREEN}Пароль: $adguard_password${NC}"
+            echo -e "${GREEN}Логин AdGuardHome: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль AdGuardHome: $adguard_password${NC}"
             ;;
         dark)
             echo -e "${BLUE}Веб-интерфейс WireGuard: http://$MYHOST_IP:51821${NC}"
             echo -e "${GREEN}Пароль wg-easy: openode${NC}"
             echo -e "${BLUE}AdGuardHome через VPN: http://10.2.0.100${NC}"
-            echo -e "${GREEN}Логин: $adguard_user${NC}"
-            echo -e "${GREEN}Пароль: $adguard_password${NC}"
+            echo -e "${GREEN}Логин AdGuardHome: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль AdGuardHome: $adguard_password${NC}"
+            ;;
+        amnezia)
+            echo -e "${BLUE}Веб-интерфейс Amnezia WireGuard: http://$wg_host:$port${NC}"
+            echo -e "${GREEN}Пароль WG-EASY: $wg_password${NC}"
+            echo -e "${BLUE}AdGuardHome доступен через VPN: http://10.2.0.100${NC}"
+            echo -e "${GREEN}Логин AdGuardHome: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль AdGuardHome: $adguard_password${NC}"
             ;;
     esac
+}
+
+
+# Функция для удаления конфигурации AdGuardHome и перезапуска контейнера
+reset_adguard_config() {
+    if [ -f "$CONF_DIR/AdGuardHome.yaml" ]; then
+        echo -e "${YELLOW}Вы уверены, что хотите удалить файл конфигурации AdGuardHome? Это сбросит все настройки! (y/n): ${NC}"
+        read confirm
+        if [ "$confirm" == "y" ]; then
+            echo -e "${GREEN}Удаление файла $CONF_DIR/AdGuardHome.yaml...${NC}"
+            rm -f "$CONF_DIR/AdGuardHome.yaml"
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}Файл успешно удален${NC}"
+            else
+                echo -e "${RED}Ошибка при удалении файла${NC}"
+                exit 1
+            fi
+
+            # Проверка существования docker-compose.yml
+            if [ -f "$WORK_DIR/docker-compose.yml" ]; then
+                echo -e "${GREEN}Перезапуск контейнера AdGuardHome...${NC}"
+                VERSION=$(get_dwg_version)
+                if [ "$VERSION" == "dark" ]; then
+                    docker compose -f "$WORK_DIR/docker-compose.yml" restart adwireguard
+                else
+                    docker compose -f "$WORK_DIR/docker-compose.yml" restart adguardhome
+                fi
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}Контейнер AdGuardHome перезапущен${NC}"
+                else
+                    echo -e "${RED}Ошибка при перезапуске контейнера${NC}"
+                    exit 1
+                fi
+
+                # Инструкции после сброса
+                echo -e "\n${YELLOW}Конфигурация AdGuardHome сброшена. Что делать дальше:${NC}"
+                echo -e "1. ${GREEN}Подключитесь к сети WireGuard${NC}, используя конфигурацию вашего клиента."
+                echo -e "   - Если вы используете DWG-CLI, сгенерируйте конфигурацию с помощью 'dwg peers'."
+                echo -e "   - Для других версий (UI, DARK, A) используйте веб-интерфейс WireGuard для создания клиента."
+                echo -e "2. ${GREEN}Откройте браузер и перейдите по адресу:${NC} http://10.2.0.100"
+                echo -e "   - Это внутренний IP-адрес AdGuardHome, доступный через VPN."
+                echo -e "3. ${GREEN}Выполните стандартную настройку AdGuardHome через веб-интерфейс:${NC}"
+                echo -e "   - Укажите логин и пароль (по умолчанию после сброса: admin/admin)."
+                echo -e "   - Настройте DNS-серверы (например, upstream DNS: https://cloudflare-dns.com/dns-query)."
+                echo -e "   - Сохраните настройки и проверьте подключение."
+                echo -e "${YELLOW}Примечание:${NC} Если проблемы с DNS сохраняются, убедитесь, что WireGuard работает корректно."
+            else
+                echo -e "${RED}Файл docker-compose.yml не найден, контейнер не перезапущен${NC}"
+            fi
+        else
+            echo -e "${GREEN}Действие отменено${NC}"
+        fi
+    else
+        echo -e "${RED}Файл $CONF_DIR/AdGuardHome.yaml не найден${NC}"
+        echo -e "${YELLOW}Если установка DWG не завершилась из-за проблем с DNS, выполните 'dwg install' заново после проверки сети.${NC}"
+    fi
 }
 
 # Функция управления пирами (CLI версия)
@@ -770,8 +953,8 @@ status() {
 
         echo -e "${GREEN}Node IP:${NC} $MYHOST_IP"
         echo -e "${GREEN}Config Path:${NC} $CONF_DIR/AdGuardHome.yaml"
-        if [ "$VERSION" == "ui" ] || [ "$VERSION" == "dark" ]; then
-            echo -e "${GREEN}WireGuard Web UI:${NC} http://$MYHOST_IP:51821"
+        if [ "$VERSION" == "ui" ] || [ "$VERSION" == "dark" ] || [ "$VERSION" == "amnezia" ]; then
+            echo -e "${GREEN}WireGuard Web UI:${NC} http://$MYHOST_IP:$port"
         fi
         if [ "$VERSION" != "unknown" ]; then
             echo -e "${GREEN}AdGuardHome:${NC} http://10.2.0.100 (via VPN)"
@@ -841,6 +1024,7 @@ version() {
 case "$1" in
     script-install) script_install ;;
     status) status ;;
+    reset-adguard-config) reset_adguard_config ;; 
     install) install_dwg ;;
     uninstall)
         if [ -f "$WORK_DIR/docker-compose.yml" ]; then
@@ -939,6 +1123,7 @@ case "$1" in
         echo -e "  down             – Stop services"
         echo -e "  logs             – Show logs of services"
         echo -e "  change-password  – Change passwords for wg-easy/AdGuardHome"
+        echo -e "  reset-adguard-config – Reset AdGuardHome config and restart container"
         echo -e "  peers            – Manage WireGuard peers (CLI version only)"
         echo -e "  edit             – Edit docker-compose.yml (via nano)"
         echo -e "  update           – Update DWG to latest version"
