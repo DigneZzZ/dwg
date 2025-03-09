@@ -38,19 +38,38 @@ install_deps() {
     apt update -y
 
     if ! command -v docker &> /dev/null; then
-        echo "Docker не установлен, устанавливаем..."
-        apt install -y docker.io
+        echo -e "${YELLOW}Docker не установлен, устанавливаем с помощью официального скрипта...${NC}"
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sh get-docker.sh
+        rm -f get-docker.sh
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Ошибка при установке Docker${NC}"
+            exit 1
+        fi
+        echo -e "${GREEN}Docker успешно установлен${NC}"
     else
-        echo "Docker уже установлен"
+        echo -e "${GREEN}Docker уже установлен${NC}"
     fi
 
+    # Проверка версии Docker Compose
     if ! docker compose version &> /dev/null; then
-        echo "Docker Compose не установлен, устанавливаем..."
-        apt install -y docker-compose
+        echo -e "${YELLOW}Docker Compose не установлен, обеспечиваем поддержку...${NC}"
+        # Плагин Docker Compose V2 уже включен в get-docker.sh для новых версий Docker
+        # Если по какой-то причине не работает, устанавливаем вручную
+        if ! docker compose version &> /dev/null; then
+            echo -e "${YELLOW}Установка плагина docker-compose-plugin...${NC}"
+            apt install -y docker-compose-plugin
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Ошибка при установке docker-compose-plugin${NC}"
+                exit 1
+            fi
+        fi
+        echo -e "${GREEN}Docker Compose успешно настроен${NC}"
     else
-        echo "Docker Compose уже установлен"
+        echo -e "${GREEN}Docker Compose уже установлен${NC}"
     fi
 
+    # Проверка остальных зависимостей (оставляем без изменений)
     if ! command -v qrencode &> /dev/null; then
         echo "qrencode не установлен, устанавливаем..."
         apt install -y qrencode
