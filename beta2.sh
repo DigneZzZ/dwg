@@ -808,28 +808,29 @@ show_info() {
         cli)
             echo -e "${BLUE}Для управления WireGuard: 'dwg peers' или 'docker exec -it wireguard wg'${NC}"
             echo -e "${BLUE}AdGuardHome доступен через VPN: http://10.2.0.100${NC}"
-            echo -e "${GREEN}Логин: $adguard_user${NC}"
-            echo -e "${GREEN}Пароль: $adguard_password${NC}"
+            echo -e "${GREEN}Логин AdGuardHome: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль AdGuardHome: $adguard_password${NC}"
             ;;
         ui)
             echo -e "${BLUE}Веб-интерфейс WireGuard: http://$wg_host:$port${NC}"
-            echo -e "${GREEN}Пароль: $wg_password${NC}"
+            echo -e "${GREEN}Пароль WG-EASY: $wg_password${NC}"
             echo -e "${BLUE}AdGuardHome доступен через VPN: http://10.2.0.100${NC}"
-            echo -e "${GREEN}Логин: $adguard_user${NC}"
-            echo -e "${GREEN}Пароль: $adguard_password${NC}"
+            echo -e "${GREEN}Логин AdGuardHome: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль AdGuardHome: $adguard_password${NC}"
             ;;
         dark)
             echo -e "${BLUE}Веб-интерфейс WireGuard: http://$MYHOST_IP:51821${NC}"
             echo -e "${GREEN}Пароль wg-easy: openode${NC}"
             echo -e "${BLUE}AdGuardHome через VPN: http://10.2.0.100${NC}"
-            echo -e "${GREEN}Логин: $adguard_user${NC}"
-            echo -e "${GREEN}Пароль: $adguard_password${NC}"
+            echo -e "${GREEN}Логин AdGuardHome: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль AdGuardHome: $adguard_password${NC}"
             ;;
         amnezia)
             echo -e "${BLUE}Веб-интерфейс Amnezia WireGuard: http://$wg_host:$port${NC}"
+            echo -e "${GREEN}Пароль WG-EASY: $wg_password${NC}"
             echo -e "${BLUE}AdGuardHome доступен через VPN: http://10.2.0.100${NC}"
-            echo -e "${GREEN}Логин: $adguard_user${NC}"
-            echo -e "${GREEN}Пароль: $adguard_password${NC}"
+            echo -e "${GREEN}Логин AdGuardHome: $adguard_user${NC}"
+            echo -e "${GREEN}Пароль AdGuardHome: $adguard_password${NC}"
             ;;
     esac
 }
