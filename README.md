@@ -31,7 +31,7 @@ https://openode.ru/topic/370-dwg-multi/
 Запусти команду на чистом сервере
 
 ```bash
-bash <(wget -qO- https://raw.githubusercontent.com/DigneZzZ/dwg/main/set-up.sh)
+bash <(wget -qO- https://raw.githubusercontent.com/DigneZzZ/dwg/main/set-up.sh) install
 ```
 
 
